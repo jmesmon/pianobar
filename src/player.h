@@ -93,6 +93,9 @@ struct audioPlayer {
 	ao_device *audioOutDevice;
 	unsigned char aoError;
 
+	FILE *download_handle;
+	char download_filename[1024 * 2];
+
 	WaitressHandle_t waith;
 
 	char doQuit;

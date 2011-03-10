@@ -46,6 +46,8 @@ typedef struct {
 	int maxFd;
 	int selectFds[2];
 	FILE *ctlFd;
+	FILE *download_handle;
+	char download_filename[1024 * 2];
 } BarApp_t;
 
 #endif /* _MAIN_H */

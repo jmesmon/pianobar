@@ -55,6 +55,62 @@ THE SOFTWARE.
 
 typedef void (*BarKeyShortcutFunc_t) (BarApp_t *app, FILE *curFd);
 
+static void BarDownloadFilename(char *filename, PianoSong_t *song) {
+	char *artist, *album, *title, *next_slash;
+
+	artist = strdup(song->artist);
+	album = strdup(song->album);
+	title = strdup(song->title);
+
+    next_slash = strchr(artist, '/');
+	while (next_slash != NULL) {
+		*next_slash = '_';
+        next_slash = strchr(artist, '/');
+	}
+
+    next_slash = strchr(album, '/');
+	while (next_slash != NULL) {
+		*next_slash = '_';
+        next_slash = strchr(album, '/');
+	}
+
+    next_slash = strchr(title, '/');
+	while (next_slash != NULL) {
+		*next_slash = '_';
+        next_slash = strchr(title, '/');
+	}
+
+    /*strcpy(filename, "dumps/");*/
+    strcpy(filename, "./");
+	strcat(filename, artist);
+	mkdir(filename, S_IRWXU | S_IRWXG);
+	strcat(filename, "/");
+	strcat(filename, album);
+	mkdir(filename, S_IRWXU | S_IRWXG);
+	strcat(filename, "/");
+	strcat(filename, title);
+
+	switch (song->audioFormat) {
+		#ifdef ENABLE_FAAD
+		case PIANO_AF_AACPLUS:
+			strcat(filename, ".aac");
+			break;
+		#endif
+		#ifdef ENABLE_MAD
+		case PIANO_AF_MP3:
+		case PIANO_AF_MP3_HI:
+			strcat(filename, ".mp3");
+			break;
+		#endif
+		default:
+			strcat(filename, ".dump");
+			break;
+	}
+
+	free(artist);
+	free(album);
+	free(title);
+}
 /*	copy proxy settings to waitress handle
  */
 static void BarMainLoadProxy (const BarSettings_t *settings,
@@ -289,6 +345,15 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 				app->curStation, app->playlist, &app->player, app->ph.stations,
 				PIANO_RET_OK, WAITRESS_RET_OK);
 
+
+        BarDownloadFilename(app->player.download_filename, app->playlist);
+        if (access(app->player.download_filename, R_OK) != 0) {
+            app->player.download_handle = fopen(app->player.download_filename, "w");
+            BarUiMsg(MSG_INFO, "Will dump song...\n");
+        } else {
+            app->player.download_handle = NULL;
+            BarUiMsg(MSG_INFO, "Dump file found, will not dump!\n");
+        }
 		/* prevent race condition, mode must _not_ be FREED if
 		 * thread has been started */
 		app->player.mode = PLAYER_STARTING;
