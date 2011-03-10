@@ -55,8 +55,11 @@ THE SOFTWARE.
 
 typedef void (*BarKeyShortcutFunc_t) (BarApp_t *app, FILE *curFd);
 
-static void BarDownloadFilename(char *filename, PianoSong_t *song) {
+static void BarDownloadFilename(char *filename, char* loveFilename, char* unloveFilename, PianoSong_t *song) {
+	char baseFilename[1024 * 2];
 	char *artist, *album, *title, *next_slash;
+
+    memset(baseFilename, 0, sizeof (baseFilename));
 
 	artist = strdup(song->artist);
 	album = strdup(song->album);
@@ -64,49 +67,64 @@ static void BarDownloadFilename(char *filename, PianoSong_t *song) {
 
     next_slash = strchr(artist, '/');
 	while (next_slash != NULL) {
-		*next_slash = '_';
+		*next_slash = '-';
         next_slash = strchr(artist, '/');
 	}
 
     next_slash = strchr(album, '/');
 	while (next_slash != NULL) {
-		*next_slash = '_';
+		*next_slash = '-';
         next_slash = strchr(album, '/');
 	}
 
     next_slash = strchr(title, '/');
 	while (next_slash != NULL) {
-		*next_slash = '_';
+		*next_slash = '-';
         next_slash = strchr(title, '/');
 	}
 
     /*strcpy(filename, "dumps/");*/
     strcpy(filename, "./pianobar-download/");
 	mkdir(filename, S_IRWXU | S_IRWXG);
-	strcat(filename, artist);
-	mkdir(filename, S_IRWXU | S_IRWXG);
-	strcat(filename, "/");
-	strcat(filename, album);
-	mkdir(filename, S_IRWXU | S_IRWXG);
-	strcat(filename, "/");
-	strcat(filename, title);
+
+                 /*(void)strncat(onstack, arbitrary_string,*/
+                 /*                         sizeof(onstack) - strlen(onstack) - 1);*/
+                 
+	strcat(baseFilename, artist);
+	strcat(baseFilename, "-");
+	strcat(baseFilename, album);
+	strcat(baseFilename, "-");
+	strcat(baseFilename, title);
 
 	switch (song->audioFormat) {
 		#ifdef ENABLE_FAAD
 		case PIANO_AF_AACPLUS:
-			strcat(filename, ".aac");
+			strcat(baseFilename, ".aac");
 			break;
 		#endif
 		#ifdef ENABLE_MAD
 		case PIANO_AF_MP3:
 		case PIANO_AF_MP3_HI:
-			strcat(filename, ".mp3");
+			strcat(baseFilename, ".mp3");
 			break;
 		#endif
 		default:
-			strcat(filename, ".dump");
+			strcat(baseFilename, ".dump");
 			break;
 	}
+
+    strcpy( filename, "./pianobar-download/" );
+    strcpy( loveFilename, filename );
+    strcpy( unloveFilename, filename );
+
+    strcat( loveFilename, baseFilename );
+
+    strcat( unloveFilename, "/unloved/" );
+	mkdir( unloveFilename, S_IRWXU | S_IRWXG);
+    strcat( unloveFilename, baseFilename );
+
+    strcat( filename, ".downloading-" );
+    strcat( filename, baseFilename );
 
 	free(artist);
 	free(album);
@@ -347,7 +365,8 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 				PIANO_RET_OK, WAITRESS_RET_OK);
 
 
-        BarDownloadFilename(app->player.downloadFilename, app->playlist);
+        BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->playlist);
+
         if (access(app->player.downloadFilename, R_OK) != 0) {
             app->player.downloadHandle = fopen(app->player.downloadFilename, "w");
             BarUiMsg(MSG_INFO, "Will dump song...\n");
