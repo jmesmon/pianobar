@@ -124,8 +124,8 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size, void *stream) 
 
 	QUIT_PAUSE_CHECK;
 
-	if (player->download_handle != NULL) {
-		fwrite(data, size, 1, player->download_handle);
+	if (player->downloadHandle != NULL) {
+		fwrite(data, size, 1, player->downloadHandle);
 	}
 
 	if (!BarPlayerBufferFill (player, data, size)) {
@@ -484,9 +484,9 @@ void *BarPlayerThread (void *data) {
 			/* this should never happen: thread is aborted above */
 			break;
 	}
-	if (player->download_handle!= NULL) {
-		fclose(player->download_handle);
-        player->download_handle = NULL;
+	if (player->downloadHandle!= NULL) {
+		fclose(player->downloadHandle);
+        player->downloadHandle = NULL;
 	}
 	if (player->aoError) {
 		ret = (void *) PLAYER_RET_ERR;

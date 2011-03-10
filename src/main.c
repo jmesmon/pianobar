@@ -81,7 +81,8 @@ static void BarDownloadFilename(char *filename, PianoSong_t *song) {
 	}
 
     /*strcpy(filename, "dumps/");*/
-    strcpy(filename, "./");
+    strcpy(filename, "./pianobar-download/");
+	mkdir(filename, S_IRWXU | S_IRWXG);
 	strcat(filename, artist);
 	mkdir(filename, S_IRWXU | S_IRWXG);
 	strcat(filename, "/");
@@ -346,12 +347,12 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 				PIANO_RET_OK, WAITRESS_RET_OK);
 
 
-        BarDownloadFilename(app->player.download_filename, app->playlist);
-        if (access(app->player.download_filename, R_OK) != 0) {
-            app->player.download_handle = fopen(app->player.download_filename, "w");
+        BarDownloadFilename(app->player.downloadFilename, app->playlist);
+        if (access(app->player.downloadFilename, R_OK) != 0) {
+            app->player.downloadHandle = fopen(app->player.downloadFilename, "w");
             BarUiMsg(MSG_INFO, "Will dump song...\n");
         } else {
-            app->player.download_handle = NULL;
+            app->player.downloadHandle = NULL;
             BarUiMsg(MSG_INFO, "Dump file found, will not dump!\n");
         }
 		/* prevent race condition, mode must _not_ be FREED if
