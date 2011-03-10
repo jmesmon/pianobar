@@ -487,6 +487,12 @@ void *BarPlayerThread (void *data) {
 	if (player->downloadHandle!= NULL) {
 		fclose(player->downloadHandle);
         player->downloadHandle = NULL;
+        if (player->loveSong) {
+            rename(player->downloadFilename, player->loveFilename);
+        }
+        else {
+            rename(player->downloadFilename, player->unloveFilename);
+        }
 	}
 	if (player->aoError) {
 		ret = (void *) PLAYER_RET_ERR;

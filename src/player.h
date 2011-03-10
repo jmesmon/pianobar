@@ -97,6 +97,7 @@ struct audioPlayer {
 	char downloadFilename[1024 * 2];
 	char loveFilename[1024 * 2];
 	char unloveFilename[1024 * 2];
+    unsigned int loveSong;
 
 	WaitressHandle_t waith;
 

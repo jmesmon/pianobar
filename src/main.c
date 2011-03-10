@@ -366,7 +366,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 
 
         BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->playlist);
-
+        app->player.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
         if (access(app->player.downloadFilename, R_OK) != 0) {
             app->player.downloadHandle = fopen(app->player.downloadFilename, "w");
             BarUiMsg(MSG_INFO, "Will dump song...\n");
