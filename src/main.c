@@ -369,10 +369,10 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
         app->player.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
         if (access(app->player.downloadFilename, R_OK) != 0) {
             app->player.downloadHandle = fopen(app->player.downloadFilename, "w");
-            BarUiMsg(MSG_INFO, "Will dump song...\n");
+            /*BarUiMsg(MSG_INFO, "Will dump song...\n");*/
         } else {
             app->player.downloadHandle = NULL;
-            BarUiMsg(MSG_INFO, "Dump file found, will not dump!\n");
+            /*BarUiMsg(MSG_INFO, "Dump file found, will not dump!\n");*/
         }
 		/* prevent race condition, mode must _not_ be FREED if
 		 * thread has been started */
