@@ -464,6 +464,8 @@ void *BarPlayerThread (void *data) {
 	} while (wRet == WAITRESS_RET_PARTIAL_FILE || wRet == WAITRESS_RET_TIMEOUT
 			|| wRet == WAITRESS_RET_READ_ERR);
 
+    /*BarUiMsg (MSG_NONE, "Network error: %s\n", WaitressErrorToStr (wRet));*/
+
 	switch (player->audioFormat) {
 		#ifdef ENABLE_FAAD
 		case PIANO_AF_AACPLUS:
@@ -484,19 +486,25 @@ void *BarPlayerThread (void *data) {
 			/* this should never happen: thread is aborted above */
 			break;
 	}
-	if (player->downloadHandle!= NULL) {
-		fclose(player->downloadHandle);
-        player->downloadHandle = NULL;
-        if (player->loveSong) {
-            rename(player->downloadFilename, player->loveFilename);
-        }
-        else {
-            rename(player->downloadFilename, player->unloveFilename);
-        }
-	}
 	if (player->aoError) {
 		ret = (void *) PLAYER_RET_ERR;
 	}
+    else {
+        if (player->downloadHandle!= NULL) {
+            fclose(player->downloadHandle);
+            player->downloadHandle = NULL;
+            if (wRet == WAITRESS_RET_OK) {
+                // Only "commit" download if everything downloaded okay
+                // TODO: Cleanup of partial files?
+                if (player->loveSong) {
+                    rename(player->downloadFilename, player->loveFilename);
+                }
+                else {
+                    rename(player->downloadFilename, player->unloveFilename);
+                }
+            }
+        }
+    }
 	ao_close(player->audioOutDevice);
 	WaitressFree (&player->waith);
 	#ifdef ENABLE_FAAD
