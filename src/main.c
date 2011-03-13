@@ -55,7 +55,7 @@ THE SOFTWARE.
 
 typedef void (*BarKeyShortcutFunc_t) (BarApp_t *app, FILE *curFd);
 
-static void BarDownloadFilename(char *filename, char* loveFilename, char* unloveFilename, PianoSong_t *song) {
+static void BarDownloadFilename(char *filename, char* loveFilename, char* unloveFilename, PianoStation_t *station, PianoSong_t *song) {
 	char baseFilename[1024 * 2];
 	char *artist, *album, *title, *next_slash;
 
@@ -90,6 +90,10 @@ static void BarDownloadFilename(char *filename, char* loveFilename, char* unlove
                  /*(void)strncat(onstack, arbitrary_string,*/
                  /*                         sizeof(onstack) - strlen(onstack) - 1);*/
                  
+	strcat(filename, station->name);
+	strcat(filename, "/");
+	mkdir(filename, S_IRWXU | S_IRWXG);
+
 	strcat(baseFilename, artist);
 	strcat(baseFilename, "-");
 	strcat(baseFilename, album);
@@ -113,7 +117,6 @@ static void BarDownloadFilename(char *filename, char* loveFilename, char* unlove
 			break;
 	}
 
-    strcpy( filename, "./pianobar-download/" );
     strcpy( loveFilename, filename );
     strcpy( unloveFilename, filename );
 
@@ -365,7 +368,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 				PIANO_RET_OK, WAITRESS_RET_OK);
 
 
-        BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->playlist);
+        BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->curStation, app->playlist);
         app->player.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
         if (access(app->player.downloadFilename, R_OK) != 0) {
             app->player.downloadHandle = fopen(app->player.downloadFilename, "w");
