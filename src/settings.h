@@ -82,6 +82,7 @@ typedef struct {
 	char *eventCmd;
 	char *loveIcon;
 	char *banIcon;
+	char *download;
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

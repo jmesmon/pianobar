@@ -55,83 +55,103 @@ THE SOFTWARE.
 
 typedef void (*BarKeyShortcutFunc_t) (BarApp_t *app, FILE *curFd);
 
-static void BarDownloadFilename(char *filename, char* loveFilename, char* unloveFilename, PianoStation_t *station, PianoSong_t *song) {
+/*static void BarDownloadFilename(char *filename, char* loveFilename, char* unloveFilename, PianoStation_t *station, PianoSong_t *song) {*/
+/*BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->curStation, app->playlist);*/
+static void BarSetupDownloadFilename(BarApp_t *app) {
 	char baseFilename[1024 * 2];
-	char *artist, *album, *title, *next_slash;
+	char songFilename[1024 * 2];
 
+    memset(app->player.downloadFilename, 0, sizeof (app->player.downloadFilename));
+    memset(app->player.loveFilename, 0, sizeof (app->player.loveFilename));
+    memset(app->player.unloveFilename, 0, sizeof (app->player.unloveFilename));
+
+    if (! app->settings.download) {
+        return;
+    }
+
+    memset(songFilename, 0, sizeof (songFilename));
     memset(baseFilename, 0, sizeof (baseFilename));
 
-	artist = strdup(song->artist);
-	album = strdup(song->album);
-	title = strdup(song->title);
+    {
+	    char *artist, *album, *title, *next_slash;
 
-    next_slash = strchr(artist, '/');
-	while (next_slash != NULL) {
-		*next_slash = '-';
+        artist = strdup(app->playlist->artist);
+        album = strdup(app->playlist->album);
+        title = strdup(app->playlist->title);
+
         next_slash = strchr(artist, '/');
-	}
+        while (next_slash != NULL) {
+            *next_slash = '-';
+            next_slash = strchr(artist, '/');
+        }
 
-    next_slash = strchr(album, '/');
-	while (next_slash != NULL) {
-		*next_slash = '-';
         next_slash = strchr(album, '/');
-	}
+        while (next_slash != NULL) {
+            *next_slash = '-';
+            next_slash = strchr(album, '/');
+        }
 
-    next_slash = strchr(title, '/');
-	while (next_slash != NULL) {
-		*next_slash = '-';
         next_slash = strchr(title, '/');
-	}
+        while (next_slash != NULL) {
+            *next_slash = '-';
+            next_slash = strchr(title, '/');
+        }
+
+        strcpy(songFilename, artist);
+        strcat(songFilename, "-");
+        strcat(songFilename, album);
+        strcat(songFilename, "-");
+        strcat(songFilename, title);
+
+        switch (app->playlist->audioFormat) {
+            #ifdef ENABLE_FAAD
+            case PIANO_AF_AACPLUS:
+                strcat(songFilename, ".aac");
+                break;
+            #endif
+            #ifdef ENABLE_MAD
+            case PIANO_AF_MP3:
+            case PIANO_AF_MP3_HI:
+                strcat(songFilename, ".mp3");
+                break;
+            #endif
+            default:
+                strcat(songFilename, ".dump");
+                break;
+        }
+
+        free(artist);
+        free(album);
+        free(title);
+    }
 
     /*strcpy(filename, "dumps/");*/
-    strcpy(filename, "./pianobar-download/");
-	mkdir(filename, S_IRWXU | S_IRWXG);
+    /*strcpy(filename, "./pianobar-download/");*/
+    strcpy(baseFilename, app->settings.download);
+    // TODO Check if trailing slash exists
+	strcat(baseFilename, "/");
+	mkdir(baseFilename, S_IRWXU | S_IRWXG);
 
-                 /*(void)strncat(onstack, arbitrary_string,*/
-                 /*                         sizeof(onstack) - strlen(onstack) - 1);*/
-                 
-	strcat(filename, station->name);
-	strcat(filename, "/");
-	mkdir(filename, S_IRWXU | S_IRWXG);
+	strcat(baseFilename, app->curStation->name);
+	strcat(baseFilename, "/");
+	mkdir(baseFilename, S_IRWXU | S_IRWXG);
 
-	strcat(baseFilename, artist);
-	strcat(baseFilename, "-");
-	strcat(baseFilename, album);
-	strcat(baseFilename, "-");
-	strcat(baseFilename, title);
 
-	switch (song->audioFormat) {
-		#ifdef ENABLE_FAAD
-		case PIANO_AF_AACPLUS:
-			strcat(baseFilename, ".aac");
-			break;
-		#endif
-		#ifdef ENABLE_MAD
-		case PIANO_AF_MP3:
-		case PIANO_AF_MP3_HI:
-			strcat(baseFilename, ".mp3");
-			break;
-		#endif
-		default:
-			strcat(baseFilename, ".dump");
-			break;
-	}
+    /* Loved filename */
+    strcpy( app->player.loveFilename, baseFilename );
+    strcat( app->player.loveFilename, songFilename );
 
-    strcpy( loveFilename, filename );
-    strcpy( unloveFilename, filename );
+    /* Unloved filename */
+    strcpy( app->player.unloveFilename, baseFilename );
+    strcat( app->player.unloveFilename, "/unloved/" );
+	mkdir( app->player.unloveFilename, S_IRWXU | S_IRWXG);
+    strcat( app->player.unloveFilename, songFilename );
 
-    strcat( loveFilename, baseFilename );
+    /* Downloading filename */
+    strcpy( app->player.downloadFilename, baseFilename );
+    strcat( app->player.downloadFilename, ".downloading-" );
+    strcat( app->player.downloadFilename, songFilename );
 
-    strcat( unloveFilename, "/unloved/" );
-	mkdir( unloveFilename, S_IRWXU | S_IRWXG);
-    strcat( unloveFilename, baseFilename );
-
-    strcat( filename, ".downloading-" );
-    strcat( filename, baseFilename );
-
-	free(artist);
-	free(album);
-	free(title);
 }
 /*	copy proxy settings to waitress handle
  */
@@ -368,7 +388,8 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 				PIANO_RET_OK, WAITRESS_RET_OK);
 
 
-        BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->curStation, app->playlist);
+        /*BarDownloadFilename(app->player.downloadFilename, app->player.loveFilename, app->player.unloveFilename, app->curStation, app->playlist);*/
+        BarSetupDownloadFilename(app);
         app->player.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
         if (access(app->player.downloadFilename, R_OK) != 0) {
             app->player.downloadHandle = fopen(app->player.downloadFilename, "w");

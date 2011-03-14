@@ -83,6 +83,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
+	free (settings->download);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -122,6 +123,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 	memcpy (settings->keys, defaultKeys, sizeof (defaultKeys));
 	settings->loveIcon = strdup ("<3");
 	settings->banIcon = strdup ("</3");
+    settings->download = 0;
 
 	BarGetXdgConfigDir (PACKAGE "/config", configfile, sizeof (configfile));
 	if ((configfd = fopen (configfile, "r")) == NULL) {
@@ -191,6 +193,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->banIcon = strdup (val);
 		} else if (streq ("volume", key)) {
 			settings->volume = atoi (val);
+		} else if (streq ("download", key)) {
+			settings->download = strdup (val);
 		}
 	}
 
