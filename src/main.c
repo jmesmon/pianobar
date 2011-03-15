@@ -73,7 +73,7 @@ static void BarSetupDownloadFilename(BarApp_t *app) {
     memset(baseFilename, 0, sizeof (baseFilename));
 
     {
-	    char *artist, *album, *title, *next_slash;
+	    char *artist = 0, *album = 0, *title = 0, *next_slash = 0;
 
         artist = strdup(app->playlist->artist);
         album = strdup(app->playlist->album);
@@ -135,7 +135,6 @@ static void BarSetupDownloadFilename(BarApp_t *app) {
 	strcat(baseFilename, app->curStation->name);
 	strcat(baseFilename, "/");
 	mkdir(baseFilename, S_IRWXU | S_IRWXG);
-
 
     /* Loved filename */
     strcpy( app->player.loveFilename, baseFilename );
