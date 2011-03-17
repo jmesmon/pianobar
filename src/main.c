@@ -292,7 +292,7 @@ static void BarMainHandleUserInput (BarApp_t *app) {
 						BarUiActSelectStation, BarUiActTempBanSong,
 						BarUiActPrintUpcoming, BarUiActSelectQuickMix,
 						BarUiActDebug, BarUiActBookmark, BarUiActVolDown,
-						BarUiActVolUp};
+						BarUiActVolUp, BarUiActVolMute};
 				idToF[i] (app, curFd);
 				break;
 			}

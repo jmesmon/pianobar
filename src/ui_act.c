@@ -106,6 +106,7 @@ BarUiActCallback(BarUiActHelp) {
 			"bookmark song/artist",
 			"decrease volume",
 			"increase volume",
+			"mute",
 			};
 	size_t i;
 
@@ -587,3 +588,12 @@ BarUiActCallback(BarUiActVolUp) {
 	app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
 }
 
+BarUiActCallback(BarUiActVolMute) {
+	/* FIXME: assuming unsigned integer store is atomic operation */
+	if ( app->player.scale ) {
+		app->player.scale = 0;
+	}
+	else {
+		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+	}
+}
