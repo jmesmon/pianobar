@@ -1,12 +1,12 @@
 #ifndef _DOWNLOAD_H
 #define _DOWNLOAD_H
 
-#include <piano.h>
-#include "player.h"
-#include "main.h"
-
-void BarDownloadStart(BarApp_t *);
-void BarDownloadWrite(struct audioPlayer *, char *, size_t);
-void BarDownloadFinish(struct audioPlayer *, WaitressReturn_t);
+typedef struct {
+	FILE *handle;
+	char downloadingFilename[1024 * 2];
+	char lovedFilename[1024 * 2];
+	char unlovedFilename[1024 * 2];
+	unsigned int loveSong;
+} BarDownload_t;
 
 #endif /* _DOWNLOAD_H */

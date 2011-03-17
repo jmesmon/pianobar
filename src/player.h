@@ -39,6 +39,7 @@ THE SOFTWARE.
 
 #include <piano.h>
 #include <waitress.h>
+#include "download.h"
 
 #define BAR_PLAYER_MS_TO_S_FACTOR 1000
 
@@ -93,16 +94,12 @@ struct audioPlayer {
 	ao_device *audioOutDevice;
 	unsigned char aoError;
 
-	FILE *downloadHandle;
-	char downloadFilename[1024 * 2];
-	char loveFilename[1024 * 2];
-	char unloveFilename[1024 * 2];
-	unsigned int loveSong;
-
 	WaitressHandle_t waith;
 
 	char doQuit;
 	pthread_mutex_t pauseMutex;
+
+	BarDownload_t download;
 };
 
 enum {PLAYER_RET_OK = 0, PLAYER_RET_ERR = 1};

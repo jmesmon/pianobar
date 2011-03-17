@@ -54,6 +54,113 @@ THE SOFTWARE.
 #include "ui_readline.h"
 #include "download.h"
 
+static void BarDownloadFilename(BarApp_t *app) {
+	char baseFilename[1024 * 2];
+	char songFilename[1024 * 2];
+    PianoSong_t *song = app->playlist;
+    PianoStation_t *station = app->curStation;
+    BarDownload_t *download = &(app->player.download);
+
+    memset(songFilename, 0, sizeof (songFilename));
+    memset(baseFilename, 0, sizeof (baseFilename));
+
+    {
+	    char *artist = 0, *album = 0, *title = 0, *next_slash = 0;
+
+        artist = strdup(song->artist);
+        album = strdup(song->album);
+        title = strdup(song->title);
+
+        next_slash = strchr(artist, '/');
+        while (next_slash != NULL) {
+            *next_slash = '-';
+            next_slash = strchr(artist, '/');
+        }
+
+        next_slash = strchr(album, '/');
+        while (next_slash != NULL) {
+            *next_slash = '-';
+            next_slash = strchr(album, '/');
+        }
+
+        next_slash = strchr(title, '/');
+        while (next_slash != NULL) {
+            *next_slash = '-';
+            next_slash = strchr(title, '/');
+        }
+
+        strcpy(songFilename, artist);
+        strcat(songFilename, "-");
+        strcat(songFilename, album);
+        strcat(songFilename, "-");
+        strcat(songFilename, title);
+
+        switch (song->audioFormat) {
+            #ifdef ENABLE_FAAD
+            case PIANO_AF_AACPLUS:
+                strcat(songFilename, ".aac");
+                break;
+            #endif
+            #ifdef ENABLE_MAD
+            case PIANO_AF_MP3:
+            case PIANO_AF_MP3_HI:
+                strcat(songFilename, ".mp3");
+                break;
+            #endif
+            default:
+                strcat(songFilename, ".dump");
+                break;
+        }
+
+        free(artist);
+        free(album);
+        free(title);
+    }
+
+    strcpy(baseFilename, app->settings.download);
+    // TODO Check if trailing slash exists
+	strcat(baseFilename, "/");
+	mkdir(baseFilename, S_IRWXU | S_IRWXG);
+
+	strcat(baseFilename, station->name);
+	strcat(baseFilename, "/");
+	mkdir(baseFilename, S_IRWXU | S_IRWXG);
+
+    /* Loved filename */
+    strcpy( download->lovedFilename, baseFilename );
+    strcat( download->lovedFilename, songFilename );
+
+    /* Unloved filename */
+    strcpy( download->unlovedFilename, baseFilename );
+    strcat( download->unlovedFilename, "/unloved/" );
+	mkdir( download->unlovedFilename, S_IRWXU | S_IRWXG);
+    strcat( download->unlovedFilename, songFilename );
+
+    /* Downloading filename */
+    strcpy( download->downloadingFilename, baseFilename );
+    strcat( download->downloadingFilename, ".downloading-" );
+    strcat( download->downloadingFilename, songFilename );
+}
+
+void BarDownloadStart(BarApp_t *app) {
+
+    /* Indicate that the song is loved so we save it to the right place */
+    app->player.download.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
+
+    if (! app->settings.download) {
+        /* No download directory set, so return */
+        return;
+    }
+
+    BarDownloadFilename(app);
+
+    if (access(app->player.download.downloadingFilename, R_OK) != 0) {
+        app->player.download.handle = fopen(app->player.download.downloadingFilename, "w");
+    } else {
+        app->player.download.handle = NULL;
+    }
+}
+
 typedef void (*BarKeyShortcutFunc_t) (BarApp_t *app, FILE *curFd);
 
 static void BarMainLoadProxy (const BarSettings_t *settings,

@@ -35,6 +35,32 @@ THE SOFTWARE.
 #include "ui.h"
 #include "download.h"
 
+static void BarDownloadWrite(struct audioPlayer *player, char *data, size_t size) {
+
+	if (player->download.handle != NULL) {
+		fwrite(data, size, 1, player->download.handle);
+	}
+
+}
+
+static void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
+
+	if (player->download.handle!= NULL) {
+		fclose(player->download.handle);
+		player->download.handle = NULL;
+		if (wRet == WAITRESS_RET_OK) {
+			// Only "commit" download if everything downloaded okay
+			// TODO: Cleanup of partial files?
+			if (player->download.loveSong) {
+				rename(player->download.downloadingFilename, player->download.lovedFilename);
+			}
+			else {
+				rename(player->download.downloadingFilename, player->download.unlovedFilename);
+			}
+		}
+	}
+}
+
 #define bigToHostEndian32(x) ntohl(x)
 
 /* wait while locked, but don't slow down main thread by keeping

@@ -309,7 +309,7 @@ BarUiActCallback(BarUiActLoveSong) {
 	PianoRequestDataRateSong_t reqData;
 	reqData.song = app->playlist;
 	reqData.rating = PIANO_RATE_LOVE;
-    app->player.loveSong = 1;
+    	app->player.download.loveSong = 1;
 
 	BarUiMsg (MSG_INFO, "Loving song... ");
 	BarUiActDefaultPianoCall (PIANO_REQUEST_RATE_SONG, &reqData);
