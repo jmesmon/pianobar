@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "player.h"
 #include "config.h"
 #include "ui.h"
+#include "download.h"
 
 #define bigToHostEndian32(x) ntohl(x)
 
@@ -124,9 +125,7 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size, void *stream) 
 
 	QUIT_PAUSE_CHECK;
 
-	if (player->downloadHandle != NULL) {
-		fwrite(data, size, 1, player->downloadHandle);
-	}
+	BarDownloadWrite (player, data, size);
 
 	if (!BarPlayerBufferFill (player, data, size)) {
 		return WAITRESS_CB_RET_ERR;
@@ -489,22 +488,9 @@ void *BarPlayerThread (void *data) {
 	if (player->aoError) {
 		ret = (void *) PLAYER_RET_ERR;
 	}
-    else {
-        if (player->downloadHandle!= NULL) {
-            fclose(player->downloadHandle);
-            player->downloadHandle = NULL;
-            if (wRet == WAITRESS_RET_OK) {
-                // Only "commit" download if everything downloaded okay
-                // TODO: Cleanup of partial files?
-                if (player->loveSong) {
-                    rename(player->downloadFilename, player->loveFilename);
-                }
-                else {
-                    rename(player->downloadFilename, player->unloveFilename);
-                }
-            }
-        }
-    }
+
+	BarDownloadFinish (player, wRet);
+
 	ao_close(player->audioOutDevice);
 	WaitressFree (&player->waith);
 	#ifdef ENABLE_FAAD

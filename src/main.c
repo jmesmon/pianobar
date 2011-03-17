@@ -288,13 +288,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 				app->curStation, app->playlist, &app->player, app->ph.stations,
 				PIANO_RET_OK, WAITRESS_RET_OK);
 
-        BarDownloadPrepareFilename(app);
-        app->player.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
-        if (access(app->player.downloadFilename, R_OK) != 0) {
-            app->player.downloadHandle = fopen(app->player.downloadFilename, "w");
-        } else {
-            app->player.downloadHandle = NULL;
-        }
+        BarDownloadStart(app);
 
 		/* prevent race condition, mode must _not_ be FREED if
 		 * thread has been started */
