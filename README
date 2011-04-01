@@ -1,3 +1,18 @@
+pianobar-dl
+===========
+
+pianobar-dl is a modified version of pianobar that will store played music
+on disk if you have the follow config variable set:
+
+    download = /path/to/download/directory
+
+Music is saved in a directory corresponding to the radio station. Unloved music (not-favorited)
+is stored in the 'unloved' directory. The structure for a "Blue States Radio" station would look something
+like this, for example:
+
+    /Users/alice/Download/Blue\ States\ Radio/*.aac # Loved music files
+    /Users/alice/Download/Blue\ States\ Radio/unloved/*.aac # Unloved music files
+
 pianobar
 ========
 
