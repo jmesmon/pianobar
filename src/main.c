@@ -57,6 +57,7 @@ THE SOFTWARE.
 static void BarDownloadFilename(BarApp_t *app) {
 	char baseFilename[1024 * 2];
 	char songFilename[1024 * 2];
+    char *separator = "=#=";
     PianoSong_t *song = app->playlist;
     PianoStation_t *station = app->curStation;
     BarDownload_t *download = &(app->player.download);
@@ -90,9 +91,9 @@ static void BarDownloadFilename(BarApp_t *app) {
         }
 
         strcpy(songFilename, artist);
-        strcat(songFilename, "-");
+        strcat(songFilename, separator);
         strcat(songFilename, album);
-        strcat(songFilename, "-");
+        strcat(songFilename, separator);
         strcat(songFilename, title);
 
         switch (song->audioFormat) {
@@ -102,8 +103,9 @@ static void BarDownloadFilename(BarApp_t *app) {
                 break;
             #endif
             #ifdef ENABLE_MAD
-            case PIANO_AF_MP3:
             case PIANO_AF_MP3_HI:
+                strcat(songFilename, ".hifi");
+            case PIANO_AF_MP3:
                 strcat(songFilename, ".mp3");
                 break;
             #endif
