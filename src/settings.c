@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2010
+Copyright (c) 2008-2011
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,9 +30,11 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
+#include <assert.h>
 
 #include "settings.h"
 #include "config.h"
+#include "ui_dispatch.h"
 
 #define streq(a, b) (strcmp (a, b) == 0)
 
@@ -94,20 +96,24 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 void BarSettingsRead (BarSettings_t *settings) {
 	char configfile[PATH_MAX], key[256], val[256];
 	FILE *configfd;
-	/* _must_ have same order as in BarKeyShortcutId_t */
-	static const char defaultKeys[] = {'?', '+', '-', 'a', 'c', 'd', 'e', 'g',
-			'h', 'i', 'j', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'x', '$',
-			'b', '(', ')', 'z',
-			};
-	static const char *shortcutFileKeys[] = {
-			"act_help", "act_songlove", "act_songban", "act_stationaddmusic",
-			"act_stationcreate", "act_stationdelete", "act_songexplain",
-			"act_stationaddbygenre", "act_history", "act_songinfo",
-			"act_addshared", "act_songmove", "act_songnext", "act_songpause",
-			"act_quit", "act_stationrename", "act_stationchange",
-			"act_songtired", "act_upcoming", "act_stationselectquickmix",
-			"act_debug", "act_bookmark", "act_voldown", "act_volup", "act_volmute",
-			};
+
+	/*[> _must_ have same order as in BarKeyShortcutId_t <]*/
+	/*static const char defaultKeys[] = {'?', '+', '-', 'a', 'c', 'd', 'e', 'g',*/
+	/*        'h', 'i', 'j', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'x', '$',*/
+	/*        'b', '(', ')', 'z',*/
+	/*        };*/
+	/*static const char *shortcutFileKeys[] = {*/
+	/*        "act_help", "act_songlove", "act_songban", "act_stationaddmusic",*/
+	/*        "act_stationcreate", "act_stationdelete", "act_songexplain",*/
+	/*        "act_stationaddbygenre", "act_history", "act_songinfo",*/
+	/*        "act_addshared", "act_songmove", "act_songnext", "act_songpause",*/
+	/*        "act_quit", "act_stationrename", "act_stationchange",*/
+	/*        "act_songtired", "act_upcoming", "act_stationselectquickmix",*/
+	/*        "act_debug", "act_bookmark", "act_voldown", "act_volup", "act_volmute",*/
+	/*        };*/
+
+	assert (sizeof (settings->keys) / sizeof (*settings->keys) ==
+			sizeof (dispatchActions) / sizeof (*dispatchActions));
 
 	/* apply defaults */
 	#ifdef ENABLE_FAAD
@@ -120,10 +126,12 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->history = 5;
 	settings->volume = 0;
 	settings->sortOrder = BAR_SORT_NAME_AZ;
-	memcpy (settings->keys, defaultKeys, sizeof (defaultKeys));
 	settings->loveIcon = strdup ("<3");
 	settings->banIcon = strdup ("</3");
     settings->download = 0;
+	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
+		settings->keys[i] = dispatchActions[i].defaultKey;
+	}
 
 	BarGetXdgConfigDir (PACKAGE "/config", configfile, sizeof (configfile));
 	if ((configfd = fopen (configfile, "r")) == NULL) {
@@ -151,8 +159,12 @@ void BarSettingsRead (BarSettings_t *settings) {
 			size_t i;
 			/* keyboard shortcuts */
 			for (i = 0; i < BAR_KS_COUNT; i++) {
-				if (streq (shortcutFileKeys[i], key)) {
-					settings->keys[i] = val[0];
+				if (streq (dispatchActions[i].configKey, key)) {
+					if (streq (val, "disabled")) {
+						settings->keys[i] = BAR_KS_DISABLED;
+					} else {
+						settings->keys[i] = val[0];
+					}
 					break;
 				}
 			}
