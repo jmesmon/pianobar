@@ -2,12 +2,6 @@
 *.lo
 # vim swap files
 .*.sw*
-<<<<<<< HEAD
-/pianobar
-/pianobar-download
-
-=======
 pianobar
 libpiano.a
 libpiano.so*
->>>>>>> PromyLOPh-master
