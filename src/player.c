@@ -339,6 +339,8 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size, void *stream) 
 
 	QUIT_PAUSE_CHECK;
 
+	BarDownloadWrite (player, data, size);
+
 	if (!BarPlayerBufferFill (player, data, size)) {
 		return WAITRESS_CB_RET_ERR;
 	}
