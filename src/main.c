@@ -70,9 +70,9 @@ bool _nchar( char c ){
 }
 
 char *_nstrdup( const char *s0 ){
-    char *s1 = malloc( strlen( s0 ) );
+    char *s1 = malloc( strlen( s0 ) + 1 );
     char *s1i = 0;
-    memset( s1, 0, strlen( s0 ) );
+    memset( s1, 0, strlen( s0 ) + 1 );
 
     s1i = s1;
     while( *s0 ){
