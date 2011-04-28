@@ -97,21 +97,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 	char configfile[PATH_MAX], key[256], val[256];
 	FILE *configfd;
 
-	/*[> _must_ have same order as in BarKeyShortcutId_t <]*/
-	/*static const char defaultKeys[] = {'?', '+', '-', 'a', 'c', 'd', 'e', 'g',*/
-	/*        'h', 'i', 'j', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'x', '$',*/
-	/*        'b', '(', ')', 'z',*/
-	/*        };*/
-	/*static const char *shortcutFileKeys[] = {*/
-	/*        "act_help", "act_songlove", "act_songban", "act_stationaddmusic",*/
-	/*        "act_stationcreate", "act_stationdelete", "act_songexplain",*/
-	/*        "act_stationaddbygenre", "act_history", "act_songinfo",*/
-	/*        "act_addshared", "act_songmove", "act_songnext", "act_songpause",*/
-	/*        "act_quit", "act_stationrename", "act_stationchange",*/
-	/*        "act_songtired", "act_upcoming", "act_stationselectquickmix",*/
-	/*        "act_debug", "act_bookmark", "act_voldown", "act_volup", "act_volmute",*/
-	/*        };*/
-
 	assert (sizeof (settings->keys) / sizeof (*settings->keys) ==
 			sizeof (dispatchActions) / sizeof (*dispatchActions));
 

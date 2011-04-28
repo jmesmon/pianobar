@@ -54,6 +54,57 @@ THE SOFTWARE.
 #include "ui_readline.h"
 #include "download.h"
 
+/* Normalizing strdrup for paths, etc. */
+
+bool _nchar( char c ){
+    if ( 65 <= c && c <= 90 ) { /* A .. Z */
+        return true;
+    }
+    else if ( 97 <= c && c <= 122 ) { /* a .. z */
+        return true;
+    }
+    else if ( c == 95 ) { /* _ */
+        return true;
+    }
+    return false;
+}
+
+char *_nstrdup( const char *s0 ){
+    char *s1 = malloc( strlen( s0 ) );
+    char *s1i = 0;
+    memset( s1, 0, strlen( s0 ) );
+
+    s1i = s1;
+    while( *s0 ){
+
+        if ( _nchar( *s0 ) ) {
+            *s1i = *s0;
+            s1i++;
+        }
+        else {
+            if ( s1i == s1 ) {
+                /* At the beginning of the string, just skip */
+            } 
+            else if ( *(s1i - 1) == '_' ) {
+                /* Already at a _, just skip */
+            }
+            else {
+                *s1i = '_';
+                s1i++;
+            }
+        }
+
+        s0++;
+    }
+
+    if ( *(s1i - 1) == '_' ) {
+        /* Strip trailing underscore */
+        *(s1i - 1) = 0;
+    }
+
+    return s1;
+}
+
 static void BarDownloadFilename(BarApp_t *app) {
 	char baseFilename[1024 * 2];
 	char songFilename[1024 * 2];
@@ -68,9 +119,9 @@ static void BarDownloadFilename(BarApp_t *app) {
     {
 	    char *artist = 0, *album = 0, *title = 0, *next_slash = 0;
 
-        artist = strdup(song->artist);
-        album = strdup(song->album);
-        title = strdup(song->title);
+        artist = _nstrdup(song->artist);
+        album = _nstrdup(song->album);
+        title = _nstrdup(song->title);
 
         next_slash = strchr(artist, '/');
         while (next_slash != NULL) {
