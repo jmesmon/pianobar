@@ -118,6 +118,7 @@ void BarSettingsRead (BarSettings_t *settings) {
     settings->download = 0;
     settings->downloadSafeFilename = false;
     settings->downloadSeparator = "---";
+    settings->downloadCleanup = true;
 	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
 		settings->keys[i] = dispatchActions[i].defaultKey;
 	}
@@ -200,6 +201,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 		} else if (streq ("download_separator", key)) {
 			settings->downloadSeparator = strdup (val);
+        } else if (streq ("download_cleanup", key)) {
+            settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
         }
 	}
 

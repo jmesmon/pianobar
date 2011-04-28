@@ -58,7 +58,9 @@ static void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet)
 			}
 		}
         else {
-            unlink(player->download.downloadingFilename);
+            if ( player->download.cleanup ) {
+                unlink(player->download.downloadingFilename);
+            }
         }
 	}
 }

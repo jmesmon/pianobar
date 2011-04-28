@@ -89,6 +89,7 @@ typedef struct {
 	char *download;
 	bool downloadSafeFilename;
 	char *downloadSeparator;
+    bool downloadCleanup;
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

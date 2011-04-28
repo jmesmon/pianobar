@@ -41,6 +41,7 @@ THE SOFTWARE.
 
 #include <piano.h>
 #include <waitress.h>
+
 #include "download.h"
 
 #define BAR_PLAYER_MS_TO_S_FACTOR 1000

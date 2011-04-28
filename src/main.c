@@ -215,6 +215,9 @@ void BarDownloadStart(BarApp_t *app) {
     /* Indicate that the song is loved so we save it to the right place */
     app->player.download.loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
 
+    /* Pass through the cleanup setting */
+    app->player.download.cleanup = app->settings.downloadCleanup;
+
     if (! app->settings.download) {
         /* No download directory set, so return */
         return;
@@ -227,6 +230,7 @@ void BarDownloadStart(BarApp_t *app) {
     } else {
         app->player.download.handle = NULL;
     }
+
 }
 
 static void BarMainLoadProxy (const BarSettings_t *settings,
