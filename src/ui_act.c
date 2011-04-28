@@ -228,6 +228,9 @@ BarUiActCallback(BarUiActStationFromGenre) {
 /*	print verbose song information
  */
 BarUiActCallback(BarUiActSongInfo) {
+    PianoReturn_t pRet = PIANO_RET_OK;
+    WaitressReturn_t wRet = WAITRESS_RET_OK;
+
 	assert (selStation != NULL);
 	assert (selSong != NULL);
 
@@ -237,6 +240,8 @@ BarUiActCallback(BarUiActSongInfo) {
 			selStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations, selSong->stationId) :
 			NULL);
+
+    BarUiActDefaultEventcmd ("songinfo");
 }
 
 /*	print some debugging information
