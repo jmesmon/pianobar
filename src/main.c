@@ -107,6 +107,15 @@ char *_nstrdup( const char *s0 ){
     return s1;
 }
 
+char *_slash2dash_strdup( const char *s0 ){
+    char *s1 = strdup( s0 );
+    char *s1i = s1;
+    while ( s1i = strchr( s1i, '/' ) ) {
+        *s1i = '-';
+    }
+    return s1;
+}
+
 static void BarDownloadFilename(BarApp_t *app) {
 	char baseFilename[1024 * 2];
 	char songFilename[1024 * 2];
@@ -121,7 +130,7 @@ static void BarDownloadFilename(BarApp_t *app) {
     separator = app->settings.downloadSeparator;
 
     {
-	    char *artist = 0, *album = 0, *title = 0, *next_slash = 0;
+	    char *artist = 0, *album = 0, *title = 0;
 
         if ( app->settings.downloadSafeFilename ){
             artist = _nstrdup(song->artist);
@@ -129,27 +138,9 @@ static void BarDownloadFilename(BarApp_t *app) {
             title = _nstrdup(song->title);
         }
         else {
-            artist = strdup(song->artist);
-            album = strdup(song->album);
-            title = strdup(song->title);
-
-            next_slash = strchr(artist, '/');
-            while (next_slash != NULL) {
-                *next_slash = '-';
-                next_slash = strchr(artist, '/');
-            }
-
-            next_slash = strchr(album, '/');
-            while (next_slash != NULL) {
-                *next_slash = '-';
-                next_slash = strchr(album, '/');
-            }
-
-            next_slash = strchr(title, '/');
-            while (next_slash != NULL) {
-                *next_slash = '-';
-                next_slash = strchr(title, '/');
-            }
+            artist = _slash2dash_strdup(song->artist);
+            album = _slash2dash_strdup(song->album);
+            title = _slash2dash_strdup(song->title);
         }
 
         strcpy(songFilename, artist);
@@ -158,27 +149,27 @@ static void BarDownloadFilename(BarApp_t *app) {
         strcat(songFilename, separator);
         strcat(songFilename, title);
 
-        switch (song->audioFormat) {
-            #ifdef ENABLE_FAAD
-            case PIANO_AF_AACPLUS:
-                strcat(songFilename, ".aac");
-                break;
-            #endif
-            #ifdef ENABLE_MAD
-            case PIANO_AF_MP3_HI:
-                strcat(songFilename, ".hifi");
-            case PIANO_AF_MP3:
-                strcat(songFilename, ".mp3");
-                break;
-            #endif
-            default:
-                strcat(songFilename, ".dump");
-                break;
-        }
-
         free(artist);
         free(album);
         free(title);
+    }
+
+    switch (song->audioFormat) {
+        #ifdef ENABLE_FAAD
+        case PIANO_AF_AACPLUS:
+            strcat(songFilename, ".aac");
+            break;
+        #endif
+        #ifdef ENABLE_MAD
+        case PIANO_AF_MP3_HI:
+            strcat(songFilename, ".hifi");
+        case PIANO_AF_MP3:
+            strcat(songFilename, ".mp3");
+            break;
+        #endif
+        default:
+            strcat(songFilename, ".dump");
+            break;
     }
 
     strcpy(baseFilename, app->settings.download);
@@ -186,7 +177,17 @@ static void BarDownloadFilename(BarApp_t *app) {
 	strcat(baseFilename, "/");
 	mkdir(baseFilename, S_IRWXU | S_IRWXG);
 
-	strcat(baseFilename, station->name);
+    {
+        char *station_ = 0;
+        if ( app->settings.downloadSafeFilename ){
+            station_ = _nstrdup( station->name );
+        }
+        else {
+            station_ = _slash2dash_strdup( station->name );
+        }
+        strcat( baseFilename, station_ );
+        free( station_ );
+    }
 	strcat(baseFilename, "/");
 	mkdir(baseFilename, S_IRWXU | S_IRWXG);
 
