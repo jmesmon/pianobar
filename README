@@ -6,6 +6,14 @@ on disk if you have the following config variable set:
 
     download = /path/to/download/directory
 
+In addition, you can configure the artist/album/title separator and whether the filename is
+"normalized" with the following
+
+    download_separator = ___
+    download_safe_filename = 1
+
+The default separator is '---' and by default no filename normalizing takes place
+
 Music is saved in a directory corresponding to the radio station. Unloved music (not-favorited)
 is stored in the 'unloved' directory. The structure for a "Blue States Radio" station would look something
 like this, for example:

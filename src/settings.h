@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include <piano.h>
 #include <waitress.h>
+#include <stdbool.h>
 
 /* update structure in ui_dispatch.h if you add shortcuts here */
 typedef enum {
@@ -86,6 +87,8 @@ typedef struct {
 	char *loveIcon;
 	char *banIcon;
 	char *download;
+	bool downloadSafeFilename;
+	char *downloadSeparator;
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

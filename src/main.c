@@ -78,15 +78,17 @@ char *_nstrdup( const char *s0 ){
     while( *s0 ){
 
         if ( _nchar( *s0 ) ) {
+            /* Normal character, A-Za-z_, just copy it */
             *s1i = *s0;
             s1i++;
         }
         else {
+            /* Not a normal character, attempt to replace with _ ... */
             if ( s1i == s1 ) {
                 /* At the beginning of the string, just skip */
             } 
             else if ( *(s1i - 1) == '_' ) {
-                /* Already at a _, just skip */
+                /* Already have a _, just skip */
             }
             else {
                 *s1i = '_';
@@ -98,7 +100,7 @@ char *_nstrdup( const char *s0 ){
     }
 
     if ( *(s1i - 1) == '_' ) {
-        /* Strip trailing underscore */
+        /* Strip trailing _ */
         *(s1i - 1) = 0;
     }
 
@@ -108,7 +110,7 @@ char *_nstrdup( const char *s0 ){
 static void BarDownloadFilename(BarApp_t *app) {
 	char baseFilename[1024 * 2];
 	char songFilename[1024 * 2];
-    char *separator = "=#=";
+    const char *separator = 0;
     PianoSong_t *song = app->playlist;
     PianoStation_t *station = app->curStation;
     BarDownload_t *download = &(app->player.download);
@@ -116,29 +118,38 @@ static void BarDownloadFilename(BarApp_t *app) {
     memset(songFilename, 0, sizeof (songFilename));
     memset(baseFilename, 0, sizeof (baseFilename));
 
+    separator = app->settings.downloadSeparator;
+
     {
 	    char *artist = 0, *album = 0, *title = 0, *next_slash = 0;
 
-        artist = _nstrdup(song->artist);
-        album = _nstrdup(song->album);
-        title = _nstrdup(song->title);
+        if ( app->settings.downloadSafeFilename ){
+            artist = _nstrdup(song->artist);
+            album = _nstrdup(song->album);
+            title = _nstrdup(song->title);
+        }
+        else {
+            artist = strdup(song->artist);
+            album = strdup(song->album);
+            title = strdup(song->title);
 
-        next_slash = strchr(artist, '/');
-        while (next_slash != NULL) {
-            *next_slash = '-';
             next_slash = strchr(artist, '/');
-        }
+            while (next_slash != NULL) {
+                *next_slash = '-';
+                next_slash = strchr(artist, '/');
+            }
 
-        next_slash = strchr(album, '/');
-        while (next_slash != NULL) {
-            *next_slash = '-';
             next_slash = strchr(album, '/');
-        }
+            while (next_slash != NULL) {
+                *next_slash = '-';
+                next_slash = strchr(album, '/');
+            }
 
-        next_slash = strchr(title, '/');
-        while (next_slash != NULL) {
-            *next_slash = '-';
             next_slash = strchr(title, '/');
+            while (next_slash != NULL) {
+                *next_slash = '-';
+                next_slash = strchr(title, '/');
+            }
         }
 
         strcpy(songFilename, artist);

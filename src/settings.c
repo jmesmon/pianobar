@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include <stdio.h>
 #include <limits.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "settings.h"
 #include "config.h"
@@ -86,6 +87,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->loveIcon);
 	free (settings->banIcon);
 	free (settings->download);
+	free (settings->downloadSeparator);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -114,6 +116,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->loveIcon = strdup ("<3");
 	settings->banIcon = strdup ("</3");
     settings->download = 0;
+    settings->downloadSafeFilename = false;
+    settings->downloadSeparator = "---";
 	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
 		settings->keys[i] = dispatchActions[i].defaultKey;
 	}
@@ -192,7 +196,11 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->volume = atoi (val);
 		} else if (streq ("download", key)) {
 			settings->download = strdup (val);
-		}
+		} else if (streq ("download_safe_filename", key)) {
+			settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
+		} else if (streq ("download_separator", key)) {
+			settings->downloadSeparator = strdup (val);
+        }
 	}
 
 	/* check environment variable if proxy is not set explicitly */
