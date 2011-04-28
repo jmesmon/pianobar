@@ -50,7 +50,6 @@ static void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet)
 		player->download.handle = NULL;
 		if (wRet == WAITRESS_RET_OK) {
 			// Only "commit" download if everything downloaded okay
-			// TODO: Cleanup of partial files?
 			if (player->download.loveSong) {
 				rename(player->download.downloadingFilename, player->download.lovedFilename);
 			}
@@ -58,6 +57,9 @@ static void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet)
 				rename(player->download.downloadingFilename, player->download.unlovedFilename);
 			}
 		}
+        else {
+            unlink(player->download.downloadingFilename);
+        }
 	}
 }
 
