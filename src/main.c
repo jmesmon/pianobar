@@ -57,6 +57,9 @@ THE SOFTWARE.
 /* Normalizing strdrup for paths, etc. */
 
 bool _nchar( char c ){
+    if ( 48 <= c && c <= 57 ) { /* 0 .. 9 */
+        return true;
+    }
     if ( 65 <= c && c <= 90 ) { /* A .. Z */
         return true;
     }
