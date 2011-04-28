@@ -78,34 +78,6 @@ static int BarTransformIfShared (BarApp_t *app, PianoStation_t *station) {
 /*	print current shortcut configuration
  */
 BarUiActCallback(BarUiActHelp) {
-	/*static const char *idToDesc[] = {*/
-	/*        NULL,*/
-	/*        "love current song",*/
-	/*        "ban current song",*/
-	/*        "add music to current station",*/
-	/*        "create new station",*/
-	/*        "delete current station",*/
-	/*        "explain why this song is played",*/
-	/*        "add genre station",*/
-	/*        "song history",*/
-	/*        "print information about current song/station",*/
-	/*        "add shared station",*/
-	/*        "move song to different station",*/
-	/*        "next song",*/
-	/*        "pause/continue",*/
-	/*        "quit",*/
-	/*        "rename current station",*/
-	/*        "change station",*/
-	/*        "tired (ban song for 1 month)",*/
-	/*        "upcoming songs",*/
-	/*        "select quickmix stations",*/
-	/*        NULL,*/
-	/*        "bookmark song/artist",*/
-	/*        "decrease volume",*/
-	/*        "increase volume",*/
-	/*        "mute",*/
-	/*        };*/
-	/*size_t i;*/
 	BarUiMsg (MSG_NONE, "\r");
 	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
 		if (dispatchActions[i].helpText != NULL &&
