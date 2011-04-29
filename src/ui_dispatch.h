@@ -92,6 +92,8 @@ static const BarUiDispatchAction_t dispatchActions[BAR_KS_COUNT] = {
 				"act_voldown"},
 		{BAR_DC_GLOBAL, BarUiActVolUp, "increase volume", ')',
 				"act_volup"},
+		{BAR_DC_GLOBAL, BarUiActVolMute, "mute", 'z',
+				"act_volmute"},
 		{BAR_DC_STATION, BarUiActManageStation, "delete seeds/feedback", '=',
 				"act_managestation"},
 		};
