@@ -86,8 +86,8 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
-	free (settings->download);
-	free (settings->downloadSeparator);
+    free (settings->download);
+    free (settings->downloadSeparator);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -117,7 +117,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->banIcon = strdup ("</3");
     settings->download = 0;
     settings->downloadSafeFilename = false;
-    settings->downloadSeparator = "---";
+    settings->downloadSeparator = strdup("---");
     settings->downloadCleanup = true;
 	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
 		settings->keys[i] = dispatchActions[i].defaultKey;
