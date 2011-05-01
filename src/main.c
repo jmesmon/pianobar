@@ -42,6 +42,7 @@ THE SOFTWARE.
 #include <assert.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <signal.h>
 
 /* pandora.com library */
 #include <piano.h>
@@ -513,12 +514,25 @@ static void BarMainLoop (BarApp_t *app) {
 	}
 }
 
+static BarApp_t *glapp = 0;
+
+static void BarCleanup (int sig) {
+    if ( glapp ) {
+        if ( glapp->player.download.cleanup ) {
+            unlink( glapp->player.download.downloadingFilename );
+        }
+    }
+    signal( sig, SIG_DFL );
+    raise( sig );
+}
+
 int main (int argc, char **argv) {
-	static BarApp_t app;
+    static BarApp_t app;
 	char ctlPath[PATH_MAX];
 	/* terminal attributes _before_ we started messing around with ~ECHO */
 	struct termios termOrig;
 
+    glapp = &app;
 	memset (&app, 0, sizeof (app));
 
 	/* save terminal attributes, before disabling echoing */
@@ -562,6 +576,8 @@ int main (int argc, char **argv) {
 			app.input.fds[1];
 	++app.input.maxfd;
 
+    signal( SIGINT, BarCleanup );
+    signal( SIGTERM, BarCleanup );
 	BarMainLoop (&app);
 
 	if (app.input.fds[1] != -1) {
