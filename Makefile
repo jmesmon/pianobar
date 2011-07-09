@@ -6,9 +6,14 @@ LIBDIR:=${PREFIX}/lib
 INCDIR:=${PREFIX}/include
 MANDIR:=${PREFIX}/share/man
 DYNLINK:=0
-CFLAGS:=-O2 -DNDEBUG
-LDFLAGS:=
-CC:=c99
+
+# Respect environment variables set by user; does not work with :=
+ifeq (${CFLAGS},)
+	CFLAGS=-O2 -DNDEBUG
+endif
+ifeq (${CC},cc)
+	CC=c99
+endif
 
 PIANOBAR_DIR=src
 PIANOBAR_SRC=\
@@ -89,9 +94,9 @@ pianobar: ${PIANOBAR_OBJ} ${PIANOBAR_HDR} libpiano.so.0
 else
 pianobar: ${PIANOBAR_OBJ} ${PIANOBAR_HDR} ${LIBPIANO_OBJ} ${LIBWAITRESS_OBJ} \
 		${LIBWAITRESS_HDR} ${LIBEZXML_OBJ} ${LIBEZXML_HDR}
-	${CC} ${CFLAGS} ${LDFLAGS} -lao -lpthread -lm ${LIBFAAD_LDFLAGS} \
-			${LIBMAD_LDFLAGS} -o $@ ${PIANOBAR_OBJ} ${LIBPIANO_OBJ} \
-			${LIBWAITRESS_OBJ} ${LIBEZXML_OBJ}
+	${CC} ${CFLAGS} ${LDFLAGS} ${PIANOBAR_OBJ} ${LIBPIANO_OBJ} \
+			${LIBWAITRESS_OBJ} ${LIBEZXML_OBJ} -lao -lpthread -lm \
+			${LIBFAAD_LDFLAGS} ${LIBMAD_LDFLAGS} -o $@
 endif
 
 # build shared and static libpiano
@@ -116,14 +121,21 @@ libpiano.so.0: ${LIBPIANO_RELOBJ} ${LIBPIANO_HDR} ${LIBWAITRESS_RELOBJ} \
 			-I ${LIBEZXML_INCLUDE} -c -fPIC -o $@ $<
 
 clean:
-	${RM} ${PIANOBAR_OBJ} ${LIBPIANO_OBJ} ${LIBWAITRESS_OBJ} ${LIBEZXML_OBJ} \
-			${LIBPIANO_RELOBJ} ${LIBWAITRESS_RELOBJ} ${LIBEZXML_RELOBJ} pianobar \
-			libpiano.so* libpiano.a
+	${RM} ${PIANOBAR_OBJ} ${LIBPIANO_OBJ} ${LIBWAITRESS_OBJ} ${LIBWAITRESS_OBJ}/test.o \
+			${LIBEZXML_OBJ} ${LIBPIANO_RELOBJ} ${LIBWAITRESS_RELOBJ} \
+			${LIBEZXML_RELOBJ} pianobar libpiano.so* libpiano.a waitress-test
 
 all: pianobar
 
 debug: pianobar
 debug: CFLAGS=-Wall -pedantic -ggdb
+
+waitress-test: CFLAGS+= -DTEST
+waitress-test: ${LIBWAITRESS_OBJ}
+	${CC} ${LDFLAGS} ${LIBWAITRESS_OBJ} -o waitress-test
+
+test: waitress-test
+	./waitress-test
 
 ifeq (${DYNLINK},1)
 install: pianobar install-libpiano

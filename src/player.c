@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "player.h"
 #include "config.h"
 #include "ui.h"
+#include "ui_types.h"
 #include "download.h"
 
 static void BarDownloadWrite(struct audioPlayer *player, char *data, size_t size) {
@@ -119,7 +120,7 @@ static inline int BarPlayerBufferFill (struct audioPlayer *player, char *data,
 		size_t dataSize) {
 	/* fill buffer */
 	if (player->bufferFilled + dataSize > sizeof (player->buffer)) {
-		BarUiMsg (MSG_ERR, "Buffer overflow!\n");
+		BarUiMsg (player->settings, MSG_ERR, "Buffer overflow!\n");
 		return 0;
 	}
 	memcpy (player->buffer+player->bufferFilled, data, dataSize);
@@ -173,7 +174,7 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size, void *stream) 
 					player->buffer + player->bufferRead,
 					player->sampleSize[player->sampleSizeCurr]);
 			if (frameInfo.error != 0) {
-				BarUiMsg (MSG_ERR, "Decoding error: %s\n",
+				BarUiMsg (player->settings, MSG_ERR, "Decoding error: %s\n",
 						NeAACDecGetErrorMessage (frameInfo.error));
 				break;
 			}
@@ -222,8 +223,8 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size, void *stream) 
 							&player->channels);
 					player->bufferRead += 5;
 					if (err != 0) {
-						BarUiMsg (MSG_ERR, "Error while "
-								"initializing audio decoder"
+						BarUiMsg (player->settings, MSG_ERR,
+								"Error while initializing audio decoder "
 								"(%i)\n", err);
 						return WAITRESS_CB_RET_ERR;
 					}
@@ -237,7 +238,8 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size, void *stream) 
 							&format, NULL)) == NULL) {
 						/* we're not interested in the errno */
 						player->aoError = 1;
-						BarUiMsg (MSG_ERR, "Cannot open audio device\n");
+						BarUiMsg (player->settings, MSG_ERR,
+								"Cannot open audio device\n");
 						return WAITRESS_CB_RET_ERR;
 					}
 					player->mode = PLAYER_AUDIO_INITIALIZED;
@@ -364,7 +366,8 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size, void *stream) 
 
 		if (mad_frame_decode (&player->mp3Frame, &player->mp3Stream) != 0) {
 			if (player->mp3Stream.error != MAD_ERROR_BUFLEN) {
-				BarUiMsg (MSG_ERR, "mp3 decoding error: %s\n",
+				BarUiMsg (player->settings, MSG_ERR,
+						"mp3 decoding error: %s\n",
 						mad_stream_errorstr (&player->mp3Stream));
 				return WAITRESS_CB_RET_ERR;
 			} else {
@@ -397,7 +400,8 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size, void *stream) 
 			if ((player->audioOutDevice = ao_open_live (audioOutDriver,
 					&format, NULL)) == NULL) {
 				player->aoError = 1;
-				BarUiMsg (MSG_ERR, "Cannot open audio device\n");
+				BarUiMsg (player->settings, MSG_ERR,
+						"Cannot open audio device\n");
 				return WAITRESS_CB_RET_ERR;
 			}
 
@@ -479,7 +483,7 @@ void *BarPlayerThread (void *data) {
 		#endif /* ENABLE_MAD */
 
 		default:
-			BarUiMsg (MSG_ERR, "Unsupported audio format!\n");
+			BarUiMsg (player->settings, MSG_ERR, "Unsupported audio format!\n");
 			return PLAYER_RET_OK;
 			break;
 	}

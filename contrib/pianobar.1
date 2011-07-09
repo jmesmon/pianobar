@@ -162,7 +162,7 @@ or the key you defined in
 Icon for banned songs.
 
 .TP
-.B control_proxy = http://host:port/
+.B control_proxy = http://user:password@host:port/
 Non-american users need a proxy to use pandora.com. Only the xmlrpc interface
 will use this proxy. The music is streamed directly.
 
@@ -170,6 +170,59 @@ will use this proxy. The music is streamed directly.
 .B event_command = path
 File that is executed when event occurs. See section
 .B EVENTCMD
+
+.TP
+.B format_nowplaying_song = \[dq]%t\[dq] by \[dq]%a\[dq] on \[dq]%l\[dq]%r%@%s
+Now playing song message format. Available format characters are:
+
+.B %t
+Song title
+
+.B %a
+Song artist
+
+.B %l
+Album name
+
+.B %r
+Rating icon (only love icon)
+
+.B %@
+@-sign if station is quickmix
+
+.B %s
+Real station name if quickmix
+
+.B %u
+Song detail url
+
+.TP
+.B format_nowplaying_station = Station \[dq]%n\[dq] (%i)
+Now playing station format. Available format characters are:
+
+.B %n
+Station name
+
+.B %i
+Station id
+
+.TP
+.B format_msg_none = %s
+.TQ
+.B format_msg_info = (i) %s
+.TQ
+.B format_msg_nowplaying = |>  %s
+.TQ
+.B format_msg_time = #   %s
+.TQ
+.B format_msg_err = /!\\\\ %s
+.TQ
+.B format_msg_question = [?] %s
+.TQ
+.B format_msg_list = \\t%s
+Message format strings.
+.B %s
+is replaced with the actual message.
 
 .TP
 .B history = 5
@@ -184,9 +237,9 @@ Icon for loved songs.
 Your pandora.com password. Plain-text.
 
 .TP
-.B proxy = http://host:port/
+.B proxy = http://user:password@host:port/
 Use a http proxy. Note that this setting overrides the http_proxy environment
-variable.
+variable. Only "Basic" http authentication is supported.
 
 .TP
 .B sort = {name_az, name_za, quickmix_01_name_az, quickmix_01_name_za, quickmix_10_name_az, quickmix_10_name_za}
@@ -233,8 +286,8 @@ Another example:
 can report certain "events" to an external application (see
 .B CONFIGURATION
 ). This application is started with the event name as it's first argument. More
-information (artist, title, album, stationName, error code, error description,
-song length in milliseconds, rating, album art url) is supplied through stdin.
+information like error code and description, was well as song information
+related to the current event, is supplied through stdin.
 
 Currently supported events are: artistbookmark, songban, songbookmark,
 songexplain, songfinish, songlove, songmove, songshelf, songstart,
