@@ -23,8 +23,11 @@ THE SOFTWARE.
 
 /* application settings */
 
+#ifndef __FreeBSD__
 #define _POSIX_C_SOURCE 1 /* PATH_MAX */
 #define _BSD_SOURCE /* strdup() */
+#define _DARWIN_C_SOURCE /* strdup() on OS X */
+#endif
 
 #include <string.h>
 #include <stdlib.h>
@@ -86,6 +89,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
+	free (settings->atIcon);
 	free (settings->npSongFormat);
 	free (settings->npStationFormat);
 	for (size_t i = 0; i < MSG_COUNT; i++) {
@@ -124,6 +128,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->banIcon = strdup ("</3");
 	settings->loveIcon = strdup (" <3");
 	settings->banIcon = strdup (" </3");
+	settings->atIcon = strdup (" @ ");
 	settings->npSongFormat = strdup ("\"%t\" by \"%a\" on \"%l\"%r%@%s");
 	settings->npStationFormat = strdup ("Station \"%n\" (%i)");
 
@@ -221,6 +226,9 @@ void BarSettingsRead (BarSettings_t *settings) {
 		} else if (streq ("ban_icon", key)) {
 			free (settings->banIcon);
 			settings->banIcon = strdup (val);
+		} else if (streq ("at_icon", key)) {
+			free (settings->atIcon);
+			settings->atIcon = strdup (val);
 		} else if (streq ("volume", key)) {
 			settings->volume = atoi (val);
 		} else if (streq ("format_nowplaying_song", key)) {
