@@ -94,6 +94,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->npStationFormat);
 	free (settings->listSongFormat);
 	free (settings->fifo);
+	free (settings->tlsCaPath);
 	for (size_t i = 0; i < MSG_COUNT; i++) {
 		free (settings->msgFormat[i].prefix);
 		free (settings->msgFormat[i].postfix);
@@ -136,6 +137,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->listSongFormat = strdup ("%i) %a - %t%r");
 	settings->fifo = malloc (PATH_MAX * sizeof (*settings->fifo));
 	BarGetXdgConfigDir (PACKAGE "/ctl", settings->fifo, PATH_MAX);
+	settings->tlsCaPath = strdup ("/etc/ssl/certs/ca-certificates.crt");
 
 	settings->msgFormat[MSG_NONE].prefix = NULL;
 	settings->msgFormat[MSG_NONE].postfix = NULL;
@@ -249,6 +251,9 @@ void BarSettingsRead (BarSettings_t *settings) {
 		} else if (streq ("fifo", key)) {
 			free (settings->fifo);
 			settings->fifo = strdup (val);
+		} else if (streq ("tls_ca_path", key)) {
+			free (settings->tlsCaPath);
+			settings->tlsCaPath = strdup (val);
 		} else if (strncmp (formatMsgPrefix, key,
 				strlen (formatMsgPrefix)) == 0) {
 			static const char *mapping[] = {"none", "info", "nowplaying",

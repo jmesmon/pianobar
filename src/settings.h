@@ -98,6 +98,7 @@ typedef struct {
 	char *npStationFormat;
 	char *listSongFormat;
 	char *fifo;
+	char *tlsCaPath;
 	BarMsgFormatStr_t msgFormat[MSG_COUNT];
 	char *download;
 	bool downloadSafeFilename;
