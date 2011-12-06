@@ -372,7 +372,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 		/* setup player */
 		memset (&app->player, 0, sizeof (app->player));
 
-		WaitressInit (&app->player.waith, NULL);
+		WaitressInit (&app->player.waith);
 		WaitressSetUrl (&app->player.waith, app->playlist->audioUrl);
 
 		/* set up global proxy, player is NULLed on songfinish */
@@ -523,7 +523,6 @@ int main (int argc, char **argv) {
 	char ctlPath[PATH_MAX];
 	/* terminal attributes _before_ we started messing around with ~ECHO */
 	struct termios termOrig;
-	WaitressReturn_t wRet;
 
     glapp = &app;
 	memset (&app, 0, sizeof (app));
@@ -551,19 +550,10 @@ int main (int argc, char **argv) {
 				app.settings.keys[BAR_KS_HELP]);
 	}
 
-	if ((wRet = WaitressInit (&app.waith, app.settings.tlsCaPath)) != WAITRESS_RET_OK) {
-		if (wRet == WAITRESS_RET_TLS_TRUSTFILE_ERR) {
-			BarUiMsg (&app.settings, MSG_ERR, "Can't load root certificates. "
-					"Please check the tls_ca_path setting in your config file.\n");
-		} else {
-			BarUiMsg (&app.settings, MSG_ERR, "Can't initialize HTTP library: "
-					"%s\n", WaitressErrorToStr (wRet));
-		}
-		goto die;
-	}
-
+	WaitressInit (&app.waith);
 	app.waith.url.host = strdup (PIANO_RPC_HOST);
 	app.waith.url.tls = true;
+	app.waith.tlsFingerprint = app.settings.tlsFingerprint;
 
 	/* init fds */
 	FD_ZERO(&app.input.set);
@@ -586,7 +576,6 @@ int main (int argc, char **argv) {
     signal( SIGTERM, BarCleanup );
 	BarMainLoop (&app);
 
-die:
 	if (app.input.fds[1] != -1) {
 		close (app.input.fds[1]);
 	}

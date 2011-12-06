@@ -53,21 +53,24 @@ typedef struct {
 	size_t pos;
 } WaitressFetchBufCbBuffer_t;
 
-WaitressReturn_t WaitressInit (WaitressHandle_t *waith, const char *caPath) {
+static WaitressReturn_t WaitressReceiveHeaders (WaitressHandle_t *, size_t *);
+
+#define READ_RET(buf, count, size) \
+		if ((wRet = waith->request.read (waith, buf, count, size)) != \
+				WAITRESS_RET_OK) { \
+			return wRet; \
+		}
+
+#define WRITE_RET(buf, count) \
+		if ((wRet = waith->request.write (waith, buf, count)) != WAITRESS_RET_OK) { \
+			return wRet; \
+		}
+
+void WaitressInit (WaitressHandle_t *waith) {
 	assert (waith != NULL);
 
 	memset (waith, 0, sizeof (*waith));
 	waith->timeout = 30000;
-	if (caPath != NULL) {
-		gnutls_certificate_allocate_credentials (&waith->tlsCred);
-		if (gnutls_certificate_set_x509_trust_file (waith->tlsCred, caPath,
-				GNUTLS_X509_FMT_PEM) <= 0) {
-			return WAITRESS_RET_TLS_TRUSTFILE_ERR;
-		}
-		waith->tlsInitialized = true;
-	}
-
-	return WAITRESS_RET_OK;
 }
 
 void WaitressFree (WaitressHandle_t *waith) {
@@ -75,9 +78,6 @@ void WaitressFree (WaitressHandle_t *waith) {
 
 	free (waith->url.url);
 	free (waith->proxy.url);
-	if (waith->tlsInitialized) {
-		gnutls_certificate_free_credentials (waith->tlsCred);
-	}
 	memset (waith, 0, sizeof (*waith));
 }
 
@@ -443,10 +443,10 @@ static int WaitressPollLoop (int fd, short events, int timeout) {
  *	@param write count bytes
  *	@return number of written bytes or -1 on error
  */
-static ssize_t WaitressPollWrite (WaitressHandle_t *waith,
-		const char *buf, size_t count) {
+static ssize_t WaitressPollWrite (void *data, const void *buf, size_t count) {
 	int pollres = -1;
 	ssize_t retSize;
+	WaitressHandle_t *waith = data;
 
 	assert (waith != NULL);
 	assert (buf != NULL);
@@ -469,14 +469,18 @@ static ssize_t WaitressPollWrite (WaitressHandle_t *waith,
 	return retSize;
 }
 
-static WaitressReturn_t WaitressOrdinaryWrite (WaitressHandle_t *waith,
-		const char *buf, const size_t size) {
+static WaitressReturn_t WaitressOrdinaryWrite (void *data, const char *buf,
+		const size_t size) {
+	WaitressHandle_t *waith = data;
+
 	WaitressPollWrite (waith, buf, size);
 	return waith->request.readWriteRet;
 }
 
-static WaitressReturn_t WaitressGnutlsWrite (WaitressHandle_t *waith,
-		const char *buf, const size_t size) {
+static WaitressReturn_t WaitressGnutlsWrite (void *data, const char *buf,
+		const size_t size) {
+	WaitressHandle_t *waith = data;
+
 	if (gnutls_record_send (waith->request.tlsSession, buf, size) < 0) {
 		return WAITRESS_RET_TLS_WRITE_ERR;
 	}
@@ -489,10 +493,10 @@ static WaitressReturn_t WaitressGnutlsWrite (WaitressHandle_t *waith,
  *	@param buffer size
  *	@return number of read bytes or -1 on error
  */
-static ssize_t WaitressPollRead (WaitressHandle_t *waith, char *buf,
-		size_t count) {
+static ssize_t WaitressPollRead (void *data, void *buf, size_t count) {
 	int pollres = -1;
 	ssize_t retSize;
+	WaitressHandle_t *waith = data;
 
 	assert (waith != NULL);
 	assert (buf != NULL);
@@ -514,17 +518,22 @@ static ssize_t WaitressPollRead (WaitressHandle_t *waith, char *buf,
 	return retSize;
 }
 
-static WaitressReturn_t WaitressOrdinaryRead (WaitressHandle_t *waith,
-		char *buf, const size_t size, size_t *retSize) {
+static WaitressReturn_t WaitressOrdinaryRead (void *data, char *buf,
+		const size_t size, size_t *retSize) {
+	WaitressHandle_t *waith = data;
+
 	const ssize_t ret = WaitressPollRead (waith, buf, size);
 	if (ret != -1) {
-		*retSize = ret;
+		assert (ret >= 0);
+		*retSize = (size_t) ret;
 	}
 	return waith->request.readWriteRet;
 }
 
-static WaitressReturn_t WaitressGnutlsRead (WaitressHandle_t *waith,
-		char *buf, const size_t size, size_t *retSize) {
+static WaitressReturn_t WaitressGnutlsRead (void *data, char *buf,
+		const size_t size, size_t *retSize) {
+	WaitressHandle_t *waith = data;
+
 	ssize_t ret = gnutls_record_recv (waith->request.tlsSession, buf, size);
 	if (ret < 0) {
 		return WAITRESS_RET_TLS_READ_ERR;
@@ -599,10 +608,12 @@ static char *WaitressGetline (char * const str) {
 
 /*	identity encoding handler
  */
-static WaitressHandlerReturn_t WaitressHandleIdentity (WaitressHandle_t *waith,
-		char *buf, const size_t size) {
-	assert (waith != NULL);
+static WaitressHandlerReturn_t WaitressHandleIdentity (void *data, char *buf,
+		const size_t size) {
+	assert (data != NULL);
 	assert (buf != NULL);
+
+	WaitressHandle_t *waith = data;
 
 	waith->request.contentReceived += size;
 	if (waith->callback (buf, size, waith->data) == WAITRESS_CB_RET_ERR) {
@@ -615,8 +626,12 @@ static WaitressHandlerReturn_t WaitressHandleIdentity (WaitressHandle_t *waith,
 /*	chunked encoding handler. buf must be \0-terminated, size does not include
  *	trailing \0.
  */
-static WaitressHandlerReturn_t WaitressHandleChunked (WaitressHandle_t *waith,
-		char *buf, const size_t size) {
+static WaitressHandlerReturn_t WaitressHandleChunked (void *data, char *buf,
+		const size_t size) {
+	assert (data != NULL);
+	assert (buf != NULL);
+
+	WaitressHandle_t *waith = data;
 	char *content = buf, *nextContent;
 
 	assert (waith != NULL);
@@ -700,31 +715,16 @@ static int WaitressParseStatusline (const char * const line) {
 
 /*	verify server certificate
  */
-static int WaitressTlsVerify (gnutls_session_t session) {
-	unsigned int status, certListSize;
+static int WaitressTlsVerify (const WaitressHandle_t *waith) {
+	gnutls_session_t session = waith->request.tlsSession;
+	unsigned int certListSize;
 	const gnutls_datum_t *certList;
 	gnutls_x509_crt_t cert;
-	const WaitressHandle_t *waith;
-
-	waith = gnutls_session_get_ptr (session);
-	assert (waith != NULL);
-
-	if (gnutls_certificate_verify_peers2 (session, &status) != GNUTLS_E_SUCCESS) {
-		return GNUTLS_E_CERTIFICATE_ERROR;
-	}
-
-	/* don't accept invalid certs */
-	if (status & (GNUTLS_CERT_INVALID | GNUTLS_CERT_SIGNER_NOT_FOUND |
-			GNUTLS_CERT_REVOKED | GNUTLS_CERT_EXPIRED |
-			GNUTLS_CERT_NOT_ACTIVATED)) {
-		return GNUTLS_E_CERTIFICATE_ERROR;
-	}
 
 	if (gnutls_certificate_type_get (session) != GNUTLS_CRT_X509) {
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	}
 
-	/* check hostname */
 	if ((certList = gnutls_certificate_get_peers (session,
 			&certListSize)) == NULL) {
 		return GNUTLS_E_CERTIFICATE_ERROR;
@@ -739,7 +739,14 @@ static int WaitressTlsVerify (gnutls_session_t session) {
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	}
 
-	if (gnutls_x509_crt_check_hostname (cert, waith->url.host) == 0) {
+	char fingerprint[20];
+	size_t fingerprintSize = sizeof (fingerprint);
+	if (gnutls_x509_crt_get_fingerprint (cert, GNUTLS_DIG_SHA1, fingerprint,
+			&fingerprintSize) != 0) {
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	}
+
+	if (memcmp (fingerprint, waith->tlsFingerprint, sizeof (fingerprint)) != 0) {
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	}
 
@@ -810,21 +817,38 @@ static WaitressReturn_t WaitressConnect (WaitressHandle_t *waith) {
 		if (WaitressProxyEnabled (waith)) {
 			char buf[256];
 			size_t size;
-			snprintf (buf, sizeof (buf), "CONNECT %s:%s HTTP/"
-					WAITRESS_HTTP_VERSION "\r\n\r\n",
-					waith->url.host, WaitressDefaultPort (&waith->url));
-			WaitressOrdinaryWrite (waith, buf, strlen (buf));
+			WaitressReturn_t wRet;
 
-			WaitressOrdinaryRead (waith, buf, sizeof (buf)-1, &size);
-			buf[size] = 0;
-			if (WaitressParseStatusline (buf) != 200) {
-				return WAITRESS_RET_CONNECT_REFUSED;
+			snprintf (buf, sizeof (buf), "CONNECT %s:%s HTTP/"
+					WAITRESS_HTTP_VERSION "\r\n",
+					waith->url.host, WaitressDefaultPort (&waith->url));
+			WRITE_RET (buf, strlen (buf));
+
+			/* write authorization headers */
+			if (WaitressFormatAuthorization (waith, &waith->proxy, "Proxy-",
+					buf, WAITRESS_BUFFER_SIZE)) {
+				WRITE_RET (buf, strlen (buf));
+			}
+
+			WRITE_RET ("\r\n", 2);
+
+			if ((wRet = WaitressReceiveHeaders (waith, &size)) !=
+					WAITRESS_RET_OK) {
+				return wRet;
 			}
 		}
 
 		if (gnutls_handshake (waith->request.tlsSession) != GNUTLS_E_SUCCESS) {
 			return WAITRESS_RET_TLS_HANDSHAKE_ERR;
 		}
+
+		if (WaitressTlsVerify (waith) != 0) {
+			return WAITRESS_RET_TLS_HANDSHAKE_ERR;
+		}
+
+		/* now we can talk encrypted */
+		waith->request.read = WaitressGnutlsRead;
+		waith->request.write = WaitressGnutlsWrite;
 	}
 
 	return WAITRESS_RET_OK;
@@ -833,11 +857,6 @@ static WaitressReturn_t WaitressConnect (WaitressHandle_t *waith) {
 /*	Write http header/post data to socket
  */
 static WaitressReturn_t WaitressSendRequest (WaitressHandle_t *waith) {
-#define WRITE_RET(buf, count) \
-		if ((wRet = waith->request.write (waith, buf, count)) != WAITRESS_RET_OK) { \
-			return wRet; \
-		}
-
 	assert (waith != NULL);
 	assert (waith->request.buf != NULL);
 
@@ -884,7 +903,9 @@ static WaitressReturn_t WaitressSendRequest (WaitressHandle_t *waith) {
 			WAITRESS_BUFFER_SIZE)) {
 		WRITE_RET (buf, strlen (buf));
 	}
-	if (WaitressFormatAuthorization (waith, &waith->proxy, "Proxy-",
+	/* don't leak proxy credentials to destination server if tls is used */
+	if (!waith->url.tls &&
+			WaitressFormatAuthorization (waith, &waith->proxy, "Proxy-",
 			buf, WAITRESS_BUFFER_SIZE)) {
 		WRITE_RET (buf, strlen (buf));
 	}
@@ -900,26 +921,18 @@ static WaitressReturn_t WaitressSendRequest (WaitressHandle_t *waith) {
 	}
 
 	return WAITRESS_RET_OK;
-#undef WRITE_RET
 }
 
-/*	read response header and data
+/*	receive response headers
+ *	@param Waitress handle
+ *	@param return unhandled bytes count in buf
  */
-static WaitressReturn_t WaitressReceiveResponse (WaitressHandle_t *waith) {
-#define READ_RET(buf, count, size) \
-		if ((wRet = waith->request.read (waith, buf, count, size)) != \
-				WAITRESS_RET_OK) { \
-			return wRet; \
-		}
-
-	assert (waith != NULL);
-	assert (waith->request.buf != NULL);
-
+static WaitressReturn_t WaitressReceiveHeaders (WaitressHandle_t *waith,
+		size_t *retRemaining) {
 	char * const buf = waith->request.buf;
+	size_t bufFilled = 0, recvSize = 0;
 	char *nextLine = NULL, *thisLine = NULL;
 	enum {HDRM_HEAD, HDRM_LINES, HDRM_FINISHED} hdrParseMode = HDRM_HEAD;
-	ssize_t recvSize = 0;
-	size_t bufFilled = 0;
 	WaitressReturn_t wRet = WAITRESS_RET_OK;
 
 	/* receive answer */
@@ -993,7 +1006,25 @@ static WaitressReturn_t WaitressReceiveResponse (WaitressHandle_t *waith) {
 		bufFilled -= (thisLine-buf);
 	} /* end while hdrParseMode */
 
-	recvSize = bufFilled;
+	*retRemaining = bufFilled;
+
+	return wRet;
+}
+
+/*	read response header and data
+ */
+static WaitressReturn_t WaitressReceiveResponse (WaitressHandle_t *waith) {
+	assert (waith != NULL);
+	assert (waith->request.buf != NULL);
+
+	char * const buf = waith->request.buf;
+	size_t recvSize = 0;
+	WaitressReturn_t wRet = WAITRESS_RET_OK;
+
+	if ((wRet = WaitressReceiveHeaders (waith, &recvSize)) != WAITRESS_RET_OK) {
+		return wRet;
+	}
+
 	do {
 		/* data must be \0-terminated for chunked handler */
 		buf[recvSize] = '\0';
@@ -1018,8 +1049,6 @@ static WaitressReturn_t WaitressReceiveResponse (WaitressHandle_t *waith) {
 	} while (recvSize > 0);
 
 	return WAITRESS_RET_OK;
-
-#undef READ_RET
 }
 
 /*	Receive data from host and call *callback ()
@@ -1036,16 +1065,10 @@ WaitressReturn_t WaitressFetchCall (WaitressHandle_t *waith) {
 	waith->request.write = WaitressOrdinaryWrite;
 
 	if (waith->url.tls) {
-		assert (waith->tlsInitialized);
-
-		waith->request.read = WaitressGnutlsRead;
-		waith->request.write = WaitressGnutlsWrite;
 		gnutls_init (&waith->request.tlsSession, GNUTLS_CLIENT);
-		const char *err;
-		if (gnutls_priority_set_direct (waith->request.tlsSession,
-				"PERFORMANCE", &err) != GNUTLS_E_SUCCESS) {
-			return WAITRESS_RET_ERR;
-		}
+		gnutls_set_default_priority (waith->request.tlsSession);
+
+		gnutls_certificate_allocate_credentials (&waith->tlsCred);
 		if (gnutls_credentials_set (waith->request.tlsSession,
 				GNUTLS_CRD_CERTIFICATE,
 				waith->tlsCred) != GNUTLS_E_SUCCESS) {
@@ -1059,32 +1082,27 @@ WaitressReturn_t WaitressFetchCall (WaitressHandle_t *waith) {
 				WaitressPollRead);
 		gnutls_transport_set_push_function (waith->request.tlsSession,
 				WaitressPollWrite);
-
-		/* certificate verification function */
-		gnutls_session_set_ptr (waith->request.tlsSession,
-				(gnutls_transport_ptr_t) waith);
-		gnutls_certificate_set_verify_function (waith->tlsCred,
-				WaitressTlsVerify);
 	}
+
+	/* buffer is required for connect already */
+	waith->request.buf = malloc (WAITRESS_BUFFER_SIZE *
+			sizeof (*waith->request.buf));
 
 	/* request */
 	if ((wRet = WaitressConnect (waith)) == WAITRESS_RET_OK) {
-		waith->request.buf = malloc (WAITRESS_BUFFER_SIZE *
-				sizeof (*waith->request.buf));
-
 		if ((wRet = WaitressSendRequest (waith)) == WAITRESS_RET_OK) {
 			wRet = WaitressReceiveResponse (waith);
 		}
-
-		free (waith->request.buf);
 	}
 
 	/* cleanup */
 	if (waith->url.tls) {
 		gnutls_bye (waith->request.tlsSession, GNUTLS_SHUT_RDWR);
 		gnutls_deinit (waith->request.tlsSession);
+		gnutls_certificate_free_credentials (waith->tlsCred);
 	}
 	close (waith->request.sockfd);
+	free (waith->request.buf);
 
 	if (wRet == WAITRESS_RET_OK &&
 			waith->request.contentReceived < waith->request.contentLength) {
@@ -1288,17 +1306,6 @@ int main () {
 			"VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUgbGF6eSBkb2c=");
 	compareStr (WaitressBase64Encode ("The quick brown fox jumped over the lazy do"),
 			"VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUgbGF6eSBkbw==");
-
-	gnutls_global_init ();
-	WaitressHandle_t waith;
-	char *buf;
-	WaitressInit (&waith);
-	WaitressSetUrl (&waith, "http://6xq.net:80/");
-	printf ("ret: %s\n", WaitressErrorToStr (WaitressFetchBuf (&waith, &buf)));
-	printf ("%s\n", buf);
-	free (buf);
-	WaitressFree (&waith);
-	gnutls_global_deinit ();
 
 	return EXIT_SUCCESS;
 }

@@ -92,8 +92,8 @@ typedef struct {
 	void *data;
 	WaitressCbReturn_t (*callback) (void *, size_t, void *);
 	int timeout;
+	const char *tlsFingerprint;
 	gnutls_certificate_credentials_t tlsCred;
-	bool tlsInitialized;
 
 	/* per-request data */
 	struct {
@@ -101,16 +101,16 @@ typedef struct {
 		int sockfd;
 		char *buf;
 		gnutls_session_t tlsSession;
-		/* first argument is WaitressHandle_t, but that's not defined here */
+		/* first argument is WaitressHandle_t, but that's not defined yet */
 		WaitressHandlerReturn_t (*dataHandler) (void *, char *, const size_t);
-		ssize_t (*read) (void *, char *, const size_t, ssize_t *);
-		ssize_t (*write) (void *, const char *, const size_t);
+		WaitressReturn_t (*read) (void *, char *, const size_t, size_t *);
+		WaitressReturn_t (*write) (void *, const char *, const size_t);
 		/* temporary return value storage */
 		WaitressReturn_t readWriteRet;
 	} request;
 } WaitressHandle_t;
 
-WaitressReturn_t WaitressInit (WaitressHandle_t *, const char *);
+void WaitressInit (WaitressHandle_t *);
 void WaitressFree (WaitressHandle_t *);
 bool WaitressSetProxy (WaitressHandle_t *, const char *);
 char *WaitressUrlEncode (const char *);
