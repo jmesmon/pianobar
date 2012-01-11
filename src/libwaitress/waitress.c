@@ -85,7 +85,7 @@ void WaitressFree (WaitressHandle_t *waith) {
  *	@param Waitress handle
  *	@return true|false
  */
-bool WaitressProxyEnabled (const WaitressHandle_t *waith) {
+static bool WaitressProxyEnabled (const WaitressHandle_t *waith) {
 	assert (waith != NULL);
 
 	return waith->proxy.host != NULL;
@@ -820,7 +820,10 @@ static WaitressReturn_t WaitressConnect (WaitressHandle_t *waith) {
 			WaitressReturn_t wRet;
 
 			snprintf (buf, sizeof (buf), "CONNECT %s:%s HTTP/"
-					WAITRESS_HTTP_VERSION "\r\n",
+					WAITRESS_HTTP_VERSION "\r\n"
+					"Host: %s:%s\r\n"
+					"Proxy-Connection: close\r\n",
+					waith->url.host, WaitressDefaultPort (&waith->url),
 					waith->url.host, WaitressDefaultPort (&waith->url));
 			WRITE_RET (buf, strlen (buf));
 
