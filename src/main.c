@@ -282,7 +282,8 @@ static void BarMainGetLoginCredentials (BarSettings_t *settings,
 		char passBuf[100];
 		BarUiMsg (settings, MSG_QUESTION, "Password: ");
 		BarReadlineStr (passBuf, sizeof (passBuf), input, BAR_RL_NOECHO);
-		write (STDIN_FILENO, "\n", 1);
+		/* write missing newline */
+		puts ("");
 		settings->password = strdup (passBuf);
 	}
 }
@@ -552,7 +553,6 @@ int main (int argc, char **argv) {
 
 	WaitressInit (&app.waith);
 	app.waith.url.host = strdup (PIANO_RPC_HOST);
-	app.waith.url.tls = true;
 	app.waith.tlsFingerprint = app.settings.tlsFingerprint;
 
 	/* init fds */
