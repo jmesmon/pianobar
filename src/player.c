@@ -36,7 +36,7 @@ THE SOFTWARE.
 #include "ui_types.h"
 #include "download.h"
 
-static void BarDownloadWrite(struct audioPlayer *player, char *data, size_t size) {
+static void BarDownloadWrite(struct audioPlayer *player, const void *data, size_t size) {
 
 	if (player->download.handle != NULL) {
 		fwrite(data, size, 1, player->download.handle);
