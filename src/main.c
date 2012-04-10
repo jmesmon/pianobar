@@ -316,7 +316,8 @@ static void BarMainGetInitialStation (BarApp_t *app) {
 	}
 	/* no autostart? ask the user */
 	if (app->curStation == NULL) {
-		app->curStation = BarUiSelectStation (app, app->ph.stations, "Select station: ", NULL);
+		app->curStation = BarUiSelectStation (app, app->ph.stations,
+				"Select station: ", NULL, app->settings.autoselect);
 	}
 	if (app->curStation != NULL) {
 		BarUiPrintStation (&app->settings, app->curStation);
@@ -564,9 +565,19 @@ int main (int argc, char **argv) {
 	assert (sizeof (app.input.fds) / sizeof (*app.input.fds) >= 2);
 	app.input.fds[1] = open (app.settings.fifo, O_RDWR);
 	if (app.input.fds[1] != -1) {
-		FD_SET(app.input.fds[1], &app.input.set);
-		BarUiMsg (&app.settings, MSG_INFO, "Control fifo at %s opened\n",
-				app.settings.fifo);
+		struct stat s;
+
+		/* check for file type, must be fifo */
+		fstat (app.input.fds[1], &s);
+		if (!S_ISFIFO (s.st_mode)) {
+			BarUiMsg (&app.settings, MSG_ERR, "File at %s is not a fifo\n", app.settings.fifo);
+			close (app.input.fds[1]);
+			app.input.fds[1] = -1;
+		} else {
+			FD_SET(app.input.fds[1], &app.input.set);
+			BarUiMsg (&app.settings, MSG_INFO, "Control fifo at %s opened\n",
+					app.settings.fifo);
+		}
 	}
 	app.input.maxfd = app.input.fds[0] > app.input.fds[1] ? app.input.fds[0] :
 			app.input.fds[1];
