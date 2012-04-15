@@ -393,7 +393,8 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 			WaitressSetProxy (&app->player.waith, app->settings.proxy);
 		}
 
-		app->player.gain = app->playlist->fileGain;
+		app->player.noGain = app->settings.noReplayGain;
+		app->player.gain    = app->playlist->fileGain;
 		BarUpdateScale (app);
 		app->player.audioFormat = app->playlist->audioFormat;
 		app->player.settings = &app->settings;

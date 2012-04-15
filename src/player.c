@@ -179,8 +179,11 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size,
 						NeAACDecGetErrorMessage (frameInfo.error));
 				break;
 			}
-			for (i = 0; i < frameInfo.samples; i++) {
-				aacDecoded[i] = applyReplayGain (aacDecoded[i], player->scale);
+
+			if (!player->noGain) {
+				for (i = 0; i < frameInfo.samples; i++) {
+					aacDecoded[i] = applyReplayGain (aacDecoded[i], player->scale);
+				}
 			}
 			/* ao_play needs bytes: 1 sample = 16 bits = 2 bytes */
 			ao_play (player->audioOutDevice, (char *) aacDecoded,
@@ -380,15 +383,18 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size,
 			}
 		}
 		mad_synth_frame (&player->mp3Synth, &player->mp3Frame);
-		for (i = 0; i < player->mp3Synth.pcm.length; i++) {
-			/* left channel */
-			*(madPtr++) = applyReplayGain (BarPlayerMadToShort (
-					player->mp3Synth.pcm.samples[0][i]), player->scale);
+		if (!player->noGain) {
+			for (i = 0; i < player->mp3Synth.pcm.length; i++) {
+				/* left channel */
+				*(madPtr++) = applyReplayGain (BarPlayerMadToShort (
+						player->mp3Synth.pcm.samples[0][i]), player->scale);
 
-			/* right channel */
-			*(madPtr++) = applyReplayGain (BarPlayerMadToShort (
-					player->mp3Synth.pcm.samples[1][i]), player->scale);
+				/* right channel */
+				*(madPtr++) = applyReplayGain (BarPlayerMadToShort (
+						player->mp3Synth.pcm.samples[1][i]), player->scale);
+			}
 		}
+
 		if (player->mode < PLAYER_AUDIO_INITIALIZED) {
 			ao_sample_format format;
 			int audioOutDriver;
