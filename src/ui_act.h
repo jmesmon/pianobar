@@ -58,7 +58,7 @@ BarUiActCallback(BarUiActBookmark);
 BarUiActCallback(BarUiActVolDown);
 BarUiActCallback(BarUiActVolUp);
 BarUiActCallback(BarUiActManageStation);
-BarUiActCallback(BarUiActVolMute);
 BarUiActCallback(BarUiActGainToggle);
+BarUiActCallback(BarUiActVolMute);
 
 #endif /* _UI_ACT_H */
