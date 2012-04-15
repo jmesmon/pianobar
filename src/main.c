@@ -224,6 +224,8 @@ void BarDownloadStart(BarApp_t *app) {
 
     if (! app->settings.download) {
         /* No download directory set, so return */
+	BarUiMsg (&app->settings, MSG_ERR,
+			"Error: Download directory not set\n");
         return;
     }
 
@@ -361,6 +363,15 @@ static void BarMainGetPlaylist (BarApp_t *app) {
 			pRet, wRet);
 }
 
+void BarUpdateScale (BarApp_t *app) {
+	/* FIXME: assuming unsigned integer store is atomic operation */
+	if (app->settings.mute) {
+		app->player.scale = 0;
+	} else {
+		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+	}
+}
+
 /*	start new player thread
  */
 static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
@@ -383,7 +394,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 		}
 
 		app->player.gain = app->playlist->fileGain;
-		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+		BarUpdateScale (app);
 		app->player.audioFormat = app->playlist->audioFormat;
 		app->player.settings = &app->settings;
 

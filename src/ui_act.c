@@ -561,30 +561,30 @@ BarUiActCallback(BarUiActBookmark) {
 	}
 }
 
+
 /*	decrease volume
  */
 BarUiActCallback(BarUiActVolDown) {
 	--app->settings.volume;
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+	BarUpdateScale (app);
+	BarUiMsg (&app->settings, MSG_INFO, "volume: %d\n", app->settings.volume);
 }
 
 /*	increase volume
  */
 BarUiActCallback(BarUiActVolUp) {
 	++app->settings.volume;
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+	BarUpdateScale (app);
+	BarUiMsg (&app->settings, MSG_INFO, "volume: %d\n", app->settings.volume);
 }
 
 BarUiActCallback(BarUiActVolMute) {
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	if ( app->player.scale ) {
-		app->player.scale = 0;
-	}
-	else {
-		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
-	}
+	app->settings.mute = !app->settings.mute;
+	BarUpdateScale (app);
+	if (app->settings.mute)
+		BarUiMsg (&app->settings, MSG_INFO, "mutted\n");
+	else
+		BarUiMsg (&app->settings, MSG_INFO, "unmuted\n");
 }
 
 /*	manage station (remove seeds or feedback)

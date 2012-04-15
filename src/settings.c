@@ -127,6 +127,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->forceTls = false;
 	settings->history = 5;
 	settings->volume = 0;
+	settings->mute = false;
+	settings->noReplayGain = false;
 	settings->sortOrder = BAR_SORT_NAME_AZ;
 	settings->loveIcon = strdup ("<3");
 	settings->banIcon = strdup ("</3");
@@ -242,6 +244,10 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->atIcon = strdup (val);
 		} else if (streq ("volume", key)) {
 			settings->volume = atoi (val);
+		} else if (streq ("mute", key)) {
+			settings->mute = atoi (val);
+		} else if (streq ("no_reply_gain", key)) {
+			settings->noReplayGain = atoi (val);
 		} else if (streq ("format_nowplaying_song", key)) {
 			free (settings->npSongFormat);
 			settings->npSongFormat = strdup (val);
@@ -304,9 +310,9 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 		} else if (streq ("download_separator", key)) {
 			settings->downloadSeparator = strdup (val);
-        } else if (streq ("download_cleanup", key)) {
-            settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
-        }
+		} else if (streq ("download_cleanup", key)) {
+		    settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
+		}
 	}
 
 	/* check environment variable if proxy is not set explicitly */
