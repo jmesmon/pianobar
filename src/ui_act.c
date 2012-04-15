@@ -587,6 +587,14 @@ BarUiActCallback(BarUiActVolMute) {
 		BarUiMsg (&app->settings, MSG_INFO, "unmuted\n");
 }
 
+BarUiActCallback(BarUiActGainToggle) {
+	app->player.noGain = !app->player.noGain;
+	if (app->player.noGain)
+		BarUiMsg (&app->settings, MSG_INFO, "gain OFF\n");
+	else
+		BarUiMsg (&app->settings, MSG_INFO, "gain ON\n");
+}
+
 /*	manage station (remove seeds or feedback)
  */
 BarUiActCallback(BarUiActManageStation) {
