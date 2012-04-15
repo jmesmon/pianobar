@@ -84,6 +84,7 @@ typedef struct {
 	bool forceTls;
 	unsigned int history;
 	int volume;
+    bool noReplayGain;
 	BarStationSorting_t sortOrder;
 	PianoAudioFormat_t audioFormat;
 	char *username;
