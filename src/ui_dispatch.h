@@ -95,7 +95,9 @@ static const BarUiDispatchAction_t dispatchActions[BAR_KS_COUNT] = {
 				"act_volup"},
 		{'=', BAR_DC_STATION, BarUiActManageStation, "delete seeds/feedback",
 				"act_managestation"},
-		};
+        {'!', BAR_DC_GLOBAL, BarUiActGainToggle, "toggle replay gain",
+                "act_gain"},
+        };
 
 #include <piano.h>
 #include <stdbool.h>

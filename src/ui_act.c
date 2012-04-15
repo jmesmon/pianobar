@@ -571,6 +571,14 @@ BarUiActCallback(BarUiActVolUp) {
 	app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
 }
 
+BarUiActCallback(BarUiActGainToggle) {
+	app->player.noGain = !app->player.noGain;
+	if (app->player.noGain)
+		BarUiMsg (&app->settings, MSG_INFO, "gain OFF\n");
+	else
+		BarUiMsg (&app->settings, MSG_INFO, "gain ON\n");
+}
+
 /*	manage station (remove seeds or feedback)
  */
 BarUiActCallback(BarUiActManageStation) {
