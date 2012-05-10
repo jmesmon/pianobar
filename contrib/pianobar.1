@@ -156,9 +156,14 @@ Increase volume.
 Replacement for %@ in station format string. It's " @ " by default.
 
 .TP
-.B audio_format = {aacplus,mp3,mp3-hifi}
+.B audio_format = {aacplus-lofi,aacplus,mp3,mp3-hifi}
 Select audio format. aacplus is default if both libraries (faad, mad) are
 available. mp3-hifi is available for Pandora One customers only.
+
+.TP
+.B autoselect = {1,0}
+Auto-select last remaining item of filtered list. Currently enabled for station
+selection only.
 
 .TP
 .B autostart_station = stationid
@@ -177,6 +182,15 @@ Icon for banned songs.
 .B control_proxy = http://user:password@host:port/
 Non-american users need a proxy to use pandora.com. Only the xmlrpc interface
 will use this proxy. The music is streamed directly.
+
+.TP
+.B decrypt_password = R=U!LH$O2B#
+
+.TP
+.B device = android-generic
+
+.TP
+.B encrypt_password = 6#26FRL$ZWD
 
 .TP
 .B event_command = path
@@ -266,6 +280,12 @@ Keep a history of the last n songs (5, by default). You can rate these songs.
 .TP
 .B love_icon = <3
 Icon for loved songs.
+
+.TP
+.B partner_password = AC7IBG09A3DTSYM4R41UJWL07VLN8JI7
+
+.TP
+.B partner_user = android
 
 .TP
 .B password = plaintext_password

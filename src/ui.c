@@ -137,7 +137,7 @@ void BarUiMsg (const BarSettings_t *settings, const BarUiMsg_t type,
  */
 static WaitressReturn_t BarPianoHttpRequest (WaitressHandle_t *waith,
 		PianoRequest_t *req) {
-	waith->extraHeaders = "Content-Type: text/xml\r\n";
+	waith->extraHeaders = "Content-Type: text/plain\r\n";
 	waith->postData = req->postData;
 	waith->method = WAITRESS_METHOD_POST;
 	waith->url.path = req->urlPath;
@@ -185,7 +185,7 @@ int BarUiPianoCall (BarApp_t * const app, PianoRequestType_t type,
 		*pRet = PianoResponse (&app->ph, &req);
 		if (*pRet != PIANO_RET_CONTINUE_REQUEST) {
 			/* checking for request type avoids infinite loops */
-			if (*pRet == PIANO_RET_AUTH_TOKEN_INVALID &&
+			if (*pRet == PIANO_RET_P_INVALID_AUTH_TOKEN &&
 					type != PIANO_REQUEST_LOGIN) {
 				/* reauthenticate */
 				PianoReturn_t authpRet;
@@ -330,14 +330,17 @@ static PianoStation_t **BarSortedStations (PianoStation_t *unsortedStations,
 
 /*	let user pick one station
  *	@param app handle
+ *	@param stations that should be listed
  *	@param prompt string
  *	@param called if input was not a number
+ *	@param auto-select if only one station remains after filtering
  *	@return pointer to selected station or NULL
  */
 PianoStation_t *BarUiSelectStation (BarApp_t *app, PianoStation_t *stations,
-		const char *prompt, BarUiSelectStationCallback_t callback) {
+		const char *prompt, BarUiSelectStationCallback_t callback,
+		bool autoselect) {
 	PianoStation_t **sortedStations = NULL, *retStation = NULL;
-	size_t stationCount, i;
+	size_t stationCount, i, lastDisplayed, displayCount;
 	char buf[100];
 
 	if (stations == NULL) {
@@ -352,6 +355,7 @@ PianoStation_t *BarUiSelectStation (BarApp_t *app, PianoStation_t *stations,
 			app->settings.sortOrder);
 
 	do {
+		displayCount = 0;
 		for (i = 0; i < stationCount; i++) {
 			const PianoStation_t *currStation = sortedStations[i];
 			/* filter stations */
@@ -361,26 +365,33 @@ PianoStation_t *BarUiSelectStation (BarApp_t *app, PianoStation_t *stations,
 						currStation->isQuickMix ? 'Q' : ' ',
 						!currStation->isCreator ? 'S' : ' ',
 						currStation->name);
+				++displayCount;
+				lastDisplayed = i;
 			}
 		}
 
 		BarUiMsg (&app->settings, MSG_QUESTION, prompt);
-		if (BarReadlineStr (buf, sizeof (buf), &app->input,
-				BAR_RL_DEFAULT) == 0) {
-			free (sortedStations);
-			return NULL;
-		}
-
-		if (isnumeric (buf)) {
-			unsigned long selected = strtoul (buf, NULL, 0);
-			if (selected < stationCount) {
-				retStation = sortedStations[selected];
+		if (autoselect && displayCount == 1 && stationCount != 1) {
+			/* auto-select last remaining station */
+			BarUiMsg (&app->settings, MSG_NONE, "%i\n", lastDisplayed);
+			retStation = sortedStations[lastDisplayed];
+		} else {
+			if (BarReadlineStr (buf, sizeof (buf), &app->input,
+					BAR_RL_DEFAULT) == 0) {
+				break;
 			}
-		}
 
-		/* hand over buffer to external function if it was not a station number */
-		if (retStation == NULL && callback != NULL) {
-			callback (app, buf);
+			if (isnumeric (buf)) {
+				unsigned long selected = strtoul (buf, NULL, 0);
+				if (selected < stationCount) {
+					retStation = sortedStations[selected];
+				}
+			}
+
+			/* hand over buffer to external function if it was not a station number */
+			if (retStation == NULL && callback != NULL) {
+				callback (app, buf);
+			}
 		}
 	} while (retStation == NULL);
 
@@ -473,7 +484,7 @@ PianoArtist_t *BarUiSelectArtist (BarApp_t *app, PianoArtist_t *startArtist) {
  *	@return musicId or NULL on abort/error
  */
 char *BarUiSelectMusicId (BarApp_t *app, PianoStation_t *station,
-		PianoSong_t *similarSong, const char *msg) {
+		const char *msg) {
 	char *musicId = NULL;
 	char lineBuf[100], selectBuf[2];
 	PianoSearchResult_t searchResult;
@@ -483,36 +494,19 @@ char *BarUiSelectMusicId (BarApp_t *app, PianoStation_t *station,
 	BarUiMsg (&app->settings, MSG_QUESTION, msg);
 	if (BarReadlineStr (lineBuf, sizeof (lineBuf), &app->input,
 			BAR_RL_DEFAULT) > 0) {
-		if (strcmp ("?", lineBuf) == 0 && station != NULL &&
-				similarSong != NULL) {
-			PianoReturn_t pRet;
-			WaitressReturn_t wRet;
-			PianoRequestDataGetSeedSuggestions_t reqData;
+		PianoReturn_t pRet;
+		WaitressReturn_t wRet;
+		PianoRequestDataSearch_t reqData;
 
-			reqData.station = station;
-			reqData.musicId = similarSong->musicId;
-			reqData.max = 20;
+		reqData.searchStr = lineBuf;
 
-			BarUiMsg (&app->settings, MSG_INFO, "Receiving suggestions... ");
-			if (!BarUiPianoCall (app, PIANO_REQUEST_GET_SEED_SUGGESTIONS,
-					&reqData, &pRet, &wRet)) {
-				return NULL;
-			}
-			memcpy (&searchResult, &reqData.searchResult, sizeof (searchResult));
-		} else {
-			PianoReturn_t pRet;
-			WaitressReturn_t wRet;
-			PianoRequestDataSearch_t reqData;
-
-			reqData.searchStr = lineBuf;
-
-			BarUiMsg (&app->settings, MSG_INFO, "Searching... ");
-			if (!BarUiPianoCall (app, PIANO_REQUEST_SEARCH, &reqData, &pRet,
-					&wRet)) {
-				return NULL;
-			}
-			memcpy (&searchResult, &reqData.searchResult, sizeof (searchResult));
+		BarUiMsg (&app->settings, MSG_INFO, "Searching... ");
+		if (!BarUiPianoCall (app, PIANO_REQUEST_SEARCH, &reqData, &pRet,
+				&wRet)) {
+			return NULL;
 		}
+		memcpy (&searchResult, &reqData.searchResult, sizeof (searchResult));
+
 		BarUiMsg (&app->settings, MSG_NONE, "\r");
 		if (searchResult.songs != NULL &&
 				searchResult.artists != NULL) {
@@ -709,7 +703,7 @@ inline void BarUiPrintStation (const BarSettings_t *settings,
 	BarUiCustomFormat (outstr, sizeof (outstr), settings->npStationFormat,
 			"ni", vals);
 	BarUiAppendNewline (outstr, sizeof (outstr));
-	BarUiMsg (settings, MSG_PLAYING, outstr);
+	BarUiMsg (settings, MSG_PLAYING, "%s", outstr);
 }
 
 /*	Print song infos (artist, title, album, loved)
@@ -729,7 +723,7 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 	BarUiCustomFormat (outstr, sizeof (outstr), settings->npSongFormat,
 			"talr@su", vals);
 	BarUiAppendNewline (outstr, sizeof (outstr));
-	BarUiMsg (settings, MSG_PLAYING, outstr);
+	BarUiMsg (settings, MSG_PLAYING, "%s", outstr);
 }
 
 /*	Print list of songs
@@ -756,7 +750,7 @@ size_t BarUiListSongs (const BarSettings_t *settings,
 			BarUiCustomFormat (outstr, sizeof (outstr), settings->listSongFormat,
 					"iatr", vals);
 			BarUiAppendNewline (outstr, sizeof (outstr));
-			BarUiMsg (settings, MSG_LIST, outstr);
+			BarUiMsg (settings, MSG_LIST, "%s", outstr);
 		}
 		i++;
 		song = song->next;

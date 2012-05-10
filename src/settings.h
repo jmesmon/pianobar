@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2012
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,6 +23,8 @@ THE SOFTWARE.
 
 #ifndef _SETTINGS_H
 #define _SETTINGS_H
+
+#include <stdbool.h>
 
 #include <piano.h>
 #include <waitress.h>
@@ -80,6 +82,7 @@ typedef struct {
 } BarMsgFormatStr_t;
 
 typedef struct {
+	bool autoselect;
 	unsigned int history;
 	int volume;
 	BarStationSorting_t sortOrder;
@@ -97,6 +100,7 @@ typedef struct {
 	char *npStationFormat;
 	char *listSongFormat;
 	char *fifo;
+	char *partnerUser, *partnerPassword, *device, *inkey, *outkey;
 	char tlsFingerprint[20];
 	char keys[BAR_KS_COUNT];
 	BarMsgFormatStr_t msgFormat[MSG_COUNT];

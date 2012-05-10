@@ -38,6 +38,7 @@ THE SOFTWARE.
 /* required for freebsd */
 #include <sys/types.h>
 #include <pthread.h>
+#include <stdint.h>
 
 #include <piano.h>
 #include <waitress.h>
@@ -46,6 +47,7 @@ THE SOFTWARE.
 #include "download.h"
 
 #define BAR_PLAYER_MS_TO_S_FACTOR 1000
+#define BAR_PLAYER_BUFSIZE (WAITRESS_BUFFER_SIZE*2)
 
 struct audioPlayer {
 	char doQuit;
@@ -83,7 +85,7 @@ struct audioPlayer {
 	/* stsz atom: sample sizes */
 	size_t sampleSizeN;
 	size_t sampleSizeCurr;
-	unsigned int *sampleSize;
+	uint32_t *sampleSize;
 	NeAACDecHandle aacHandle;
 	#endif
 
@@ -97,14 +99,14 @@ struct audioPlayer {
 	/* audio out */
 	ao_device *audioOutDevice;
 
+	unsigned char *buffer;
+
 	pthread_mutex_t pauseMutex;
 
 	BarDownload_t download;
 
 	const BarSettings_t *settings;
 	WaitressHandle_t waith;
-	/* buffer; should be large enough */
-	unsigned char buffer[WAITRESS_BUFFER_SIZE*2];
 };
 
 enum {PLAYER_RET_OK = 0, PLAYER_RET_ERR = 1};
