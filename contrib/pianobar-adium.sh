@@ -4,7 +4,9 @@ cleanup()
 {
 # unset status on exit
 osascript <<EOF
-tell application "Adium" to go online with message ""
+if application "Adium" is running then
+	tell application "Adium" to go online with message ""
+end if
 EOF
 reset
 }
