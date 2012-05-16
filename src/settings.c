@@ -36,6 +36,8 @@ THE SOFTWARE.
 #include <assert.h>
 #include <stdbool.h>
 
+#include <piano.h>
+
 #include "settings.h"
 #include "config.h"
 #include "ui_dispatch.h"
@@ -94,6 +96,12 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->npStationFormat);
 	free (settings->listSongFormat);
 	free (settings->fifo);
+	free (settings->rpcHost);
+	free (settings->partnerUser);
+	free (settings->partnerPassword);
+	free (settings->device);
+	free (settings->inkey);
+	free (settings->outkey);
 	for (size_t i = 0; i < MSG_COUNT; i++) {
 		free (settings->msgFormat[i].prefix);
 		free (settings->msgFormat[i].postfix);
@@ -124,7 +132,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 		#endif
 	#endif
 	settings->autoselect = true;
-	settings->forceTls = false;
 	settings->history = 5;
 	settings->volume = 0;
 	settings->mute = false;
@@ -138,10 +145,16 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->npSongFormat = strdup ("\"%t\" by \"%a\" on \"%l\"%r%@%s");
 	settings->npStationFormat = strdup ("Station \"%n\" (%i)");
 	settings->listSongFormat = strdup ("%i) %a - %t%r");
+	settings->rpcHost = strdup (PIANO_RPC_HOST);
+	settings->partnerUser = strdup ("android");
+	settings->partnerPassword = strdup ("AC7IBG09A3DTSYM4R41UJWL07VLN8JI7");
+	settings->device = strdup ("android-generic");
+	settings->inkey = strdup ("R=U!LH$O2B#");
+	settings->outkey = strdup ("6#26FRL$ZWD");
 	settings->fifo = malloc (PATH_MAX * sizeof (*settings->fifo));
 	BarGetXdgConfigDir (PACKAGE "/ctl", settings->fifo, PATH_MAX);
-	memcpy (settings->tlsFingerprint, "\xD9\x98\x0B\xA2\xCC\x0F\x97\xBB"
-			"\x03\x82\x2C\x62\x11\xEA\xEA\x4A\x06\xEE\xF4\x27",
+	memcpy (settings->tlsFingerprint, "\xA2\xA0\xBE\x8A\x37\x92\x39\xAE"
+			"\x2B\x2E\x71\x4C\x56\xB3\x8B\xC1\x2A\x9B\x4B\x77",
 			sizeof (settings->tlsFingerprint));
 
 	settings->msgFormat[MSG_NONE].prefix = NULL;
@@ -191,6 +204,27 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->username = strdup (val);
 		} else if (streq ("password", key)) {
 			settings->password = strdup (val);
+		} else if (streq ("rpc_host", key)) {
+			free (settings->rpcHost);
+			settings->rpcHost = strdup (val);
+		} else if (streq ("partner_user", key)) {
+			free (settings->partnerUser);
+			settings->partnerUser = strdup (val);
+		} else if (streq ("partner_password", key)) {
+			free (settings->partnerPassword);
+			settings->partnerPassword = strdup (val);
+		} else if (streq ("device", key)) {
+			free (settings->device);
+			settings->device = strdup (val);
+		} else if (streq ("encrypt_password", key)) {
+			free (settings->outkey);
+			settings->outkey = strdup (val);
+		} else if (streq ("decrypt_password", key)) {
+			free (settings->inkey);
+			settings->inkey = strdup (val);
+		} else if (memcmp ("act_", key, 4) == 0) {
+		} else if (memcmp ("act_", key, 4) == 0) {
+		} else if (memcmp ("act_", key, 4) == 0) {
 		} else if (memcmp ("act_", key, 4) == 0) {
 			size_t i;
 			/* keyboard shortcuts */
@@ -207,6 +241,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 		} else if (streq ("audio_format", key)) {
 			if (streq (val, "aacplus")) {
 				settings->audioFormat = PIANO_AF_AACPLUS;
+			} else if (streq (val, "aacplus-lofi")) {
+				settings->audioFormat = PIANO_AF_AACPLUS_LO;
 			} else if (streq (val, "mp3")) {
 				settings->audioFormat = PIANO_AF_MP3;
 			} else if (streq (val, "mp3-hifi")) {
@@ -262,8 +298,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->fifo = strdup (val);
 		} else if (streq ("autoselect", key)) {
 			settings->autoselect = atoi (val);
-		} else if (streq ("force_tls", key)) {
-			settings->forceTls = atoi (val);
 		} else if (streq ("tls_fingerprint", key)) {
 			/* expects 40 byte hex-encoded sha1 */
 			if (strlen (val) == 40) {

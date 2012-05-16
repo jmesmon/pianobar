@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2012
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -84,7 +84,6 @@ typedef struct {
 
 typedef struct {
 	bool autoselect;
-	bool forceTls;
 	unsigned int history;
 	int volume;
 	bool mute;
@@ -104,6 +103,7 @@ typedef struct {
 	char *npStationFormat;
 	char *listSongFormat;
 	char *fifo;
+	char *rpcHost, *partnerUser, *partnerPassword, *device, *inkey, *outkey;
 	char tlsFingerprint[20];
 	char keys[BAR_KS_COUNT];
 	BarMsgFormatStr_t msgFormat[MSG_COUNT];

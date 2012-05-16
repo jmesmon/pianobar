@@ -23,10 +23,14 @@ THE SOFTWARE.
 
 /* functions responding to user's keystrokes */
 
+#ifndef __FreeBSD__
+#define _POSIX_C_SOURCE 200112L /* pthread_kill() */
+#endif
+
 #include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <assert.h>
+#include <signal.h>
 
 #include "ui.h"
 #include "ui_readline.h"
@@ -49,10 +53,9 @@ THE SOFTWARE.
 static inline void BarUiDoSkipSong (struct audioPlayer *player) {
 	assert (player != NULL);
 
-	player->doQuit = 1;
-	/* unlocking an unlocked mutex is forbidden by some implementations */
-	pthread_mutex_trylock (&player->pauseMutex);
-	pthread_mutex_unlock (&player->pauseMutex);
+	if (player->mode != PLAYER_FINISHED_PLAYBACK && player->mode != PLAYER_FREED) {
+		pthread_cancel (player->thread);
+	}
 }
 
 /*	transform station if necessary to allow changes like rename, rate, ...
@@ -101,7 +104,7 @@ BarUiActCallback(BarUiActAddMusic) {
 	assert (selStation != NULL);
 
 	reqData.musicId = BarUiSelectMusicId (app, selStation,
-			selSong, "Add artist or title to station: ");
+			"Add artist or title to station: ");
 	if (reqData.musicId != NULL) {
 		if (!BarTransformIfShared (app, selStation)) {
 			return;
@@ -149,7 +152,7 @@ BarUiActCallback(BarUiActCreateStation) {
 	WaitressReturn_t wRet;
 	PianoRequestDataCreateStation_t reqData;
 
-	reqData.id = BarUiSelectMusicId (app, NULL, NULL,
+	reqData.id = BarUiSelectMusicId (app, NULL,
 			"Create station from artist or title: ");
 	if (reqData.id != NULL) {
 		reqData.type = "mi";
@@ -266,8 +269,7 @@ BarUiActCallback(BarUiActDebug) {
 			"rating:\t%i\n"
 			"stationId:\t%s\n"
 			"title:\t%s\n"
-			"trackToken:\t%s\n"
-			"userSeed:\t%s\n",
+			"trackToken:\t%s\n",
 			selSong->album,
 			selSong->artist,
 			selSong->audioFormat,
@@ -279,8 +281,7 @@ BarUiActCallback(BarUiActDebug) {
 			selSong->rating,
 			selSong->stationId,
 			selSong->title,
-			selSong->trackToken,
-			selSong->userSeed);
+			selSong->trackToken);
 }
 
 /*	rate current song
@@ -352,9 +353,12 @@ BarUiActCallback(BarUiActMoveSong) {
 /*	pause
  */
 BarUiActCallback(BarUiActPause) {
-	/* already locked => unlock/unpause */
-	if (pthread_mutex_trylock (&app->player.pauseMutex) == EBUSY) {
-		pthread_mutex_unlock (&app->player.pauseMutex);
+	if (app->player.paused) {
+		pthread_kill (app->player.thread, BAR_PLAYER_SIGCONT);
+		app->player.paused = false;
+	} else {
+		pthread_kill (app->player.thread, BAR_PLAYER_SIGSTOP);
+		app->player.paused = true;
 	}
 }
 
@@ -497,8 +501,9 @@ BarUiActCallback(BarUiActSelectQuickMix) {
 /*	quit
  */
 BarUiActCallback(BarUiActQuit) {
-	app->doQuit = 1;
+	/* cancels player thread */
 	BarUiDoSkipSong (&app->player);
+	app->doQuit = 1;
 }
 
 /*	song history
