@@ -527,7 +527,7 @@ void *BarPlayerThread (void *data) {
 		ret = (void *) PLAYER_RET_ERR;
 	}
 
-	BarDownloadFinish(player, wRet);
+	BarDownloadFinish (player, wRet);
 
 	ao_close(player->audioOutDevice);
 	WaitressFree (&player->waith);
