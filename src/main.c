@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2012
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -168,8 +168,6 @@ static void BarDownloadFilename(BarApp_t *app) {
             break;
         #endif
         #ifdef ENABLE_MAD
-        case PIANO_AF_MP3_HI:
-            strcat(songFilename, ".hifi");
         case PIANO_AF_MP3:
             strcat(songFilename, ".mp3");
             break;
@@ -345,7 +343,7 @@ static void BarMainGetPlaylist (BarApp_t *app) {
 	WaitressReturn_t wRet;
 	PianoRequestDataGetPlaylist_t reqData;
 	reqData.station = app->curStation;
-	reqData.format = app->settings.audioFormat;
+	reqData.quality = app->settings.audioQuality;
 
 	BarUiMsg (&app->settings, MSG_INFO, "Receiving new playlist... ");
 	if (!BarUiPianoCall (app, PIANO_REQUEST_GET_PLAYLIST,
@@ -374,7 +372,7 @@ void BarUpdateScale (BarApp_t *app) {
 
 /*	start new player thread
  */
-static void BarMainStartPlayback (BarApp_t *app) {
+static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 	BarUiPrintSong (&app->settings, app->playlist, app->curStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations,
 			app->playlist->stationId) : NULL);
@@ -398,6 +396,7 @@ static void BarMainStartPlayback (BarApp_t *app) {
 		BarUpdateScale (app);
 		app->player.audioFormat = app->playlist->audioFormat;
 		app->player.settings = &app->settings;
+		pthread_mutex_init (&app->player.pauseMutex, NULL);
 
 		/* throw event */
 		BarUiStartEventCmd (&app->settings, "songstart",
@@ -410,24 +409,27 @@ static void BarMainStartPlayback (BarApp_t *app) {
 		 * thread has been started */
 		app->player.mode = PLAYER_STARTING;
 		/* start player */
-		pthread_create (&app->player.thread, NULL, BarPlayerThread,
+		pthread_create (playerThread, NULL, BarPlayerThread,
 				&app->player);
 	}
 }
 
 /*	player is done, clean up
  */
-static void BarMainPlayerCleanup (BarApp_t *app) {
+static void BarMainPlayerCleanup (BarApp_t *app, pthread_t *playerThread) {
+	void *threadRet;
+
 	BarUiStartEventCmd (&app->settings, "songfinish", app->curStation,
 			app->playlist, &app->player, app->ph.stations, PIANO_RET_OK,
 			WAITRESS_RET_OK);
 
 	/* FIXME: pthread_join blocks everything if network connection
 	 * is hung up e.g. */
-	pthread_join (app->player.thread, NULL);
+	pthread_join (*playerThread, &threadRet);
+	pthread_mutex_destroy (&app->player.pauseMutex);
 
 	/* don't continue playback if thread reports error */
-	if (app->player.ret != PLAYER_RET_OK) {
+	if (threadRet != (void *) PLAYER_RET_OK) {
 		app->curStation = NULL;
 	}
 
@@ -457,6 +459,8 @@ static void BarMainPrintTime (BarApp_t *app) {
 /*	main loop
  */
 static void BarMainLoop (BarApp_t *app) {
+	pthread_t playerThread;
+
 	BarMainGetLoginCredentials (&app->settings, &app->input);
 
 	BarMainLoadProxy (&app->settings, &app->waith);
@@ -478,7 +482,7 @@ static void BarMainLoop (BarApp_t *app) {
 	while (!app->doQuit) {
 		/* song finished playing, clean up things/scrobble song */
 		if (app->player.mode == PLAYER_FINISHED_PLAYBACK) {
-			BarMainPlayerCleanup (app);
+			BarMainPlayerCleanup (app, &playerThread);
 		}
 
 		/* check whether player finished playing and start playing new
@@ -495,7 +499,7 @@ static void BarMainLoop (BarApp_t *app) {
 			}
 			/* song ready to play */
 			if (app->playlist != NULL) {
-				BarMainStartPlayback (app);
+				BarMainStartPlayback (app, &playerThread);
 			}
 		}
 
@@ -509,7 +513,7 @@ static void BarMainLoop (BarApp_t *app) {
 	}
 
 	if (app->player.mode != PLAYER_FREED) {
-		BarMainPlayerCleanup (app);
+		pthread_join (playerThread, NULL);
 	}
 }
 
@@ -538,6 +542,9 @@ int main (int argc, char **argv) {
 	BarTermSave (&termOrig);
 	BarTermSetEcho (0);
 	BarTermSetBuffer (0);
+
+	/* signals */
+	signal (SIGPIPE, SIG_IGN);
 
 	/* init some things */
 	ao_initialize ();

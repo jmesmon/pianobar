@@ -250,6 +250,14 @@ const char *PianoErrorToStr (PianoReturn_t ret) {
 			return "Out of memory.";
 			break;
 
+		case PIANO_RET_INVALID_LOGIN:
+			return "Wrong email address or password.";
+			break;
+
+		case PIANO_RET_QUALITY_UNAVAILABLE:
+			return "Selected audio quality is not available.";
+			break;
+
 		/* pandora error messages */
 		case PIANO_RET_P_INTERNAL:
 			return "Internal error.";
@@ -281,6 +289,19 @@ const char *PianoErrorToStr (PianoReturn_t ret) {
 
 		case PIANO_RET_P_INVALID_PARTNER_LOGIN:
 			return "Invalid partner login.";
+			break;
+
+		case PIANO_RET_P_LICENSING_RESTRICTIONS:
+			return "Pandora is not available in your country. "
+					"Set up a control proxy (see manpage).";
+			break;
+
+		case PIANO_RET_P_PARTNER_NOT_AUTHORIZED:
+			return "Invalid partner credentials.";
+			break;
+
+		case PIANO_RET_P_LISTENER_NOT_AUTHORIZED:
+			return "Listener not authorized.";
 			break;
 
 		default:
