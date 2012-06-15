@@ -23,14 +23,10 @@ THE SOFTWARE.
 
 /* functions responding to user's keystrokes */
 
-#ifndef __FreeBSD__
-#define _POSIX_C_SOURCE 200112L /* pthread_kill() */
-#endif
-
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <assert.h>
-#include <signal.h>
 
 #include "ui.h"
 #include "ui_readline.h"
@@ -53,9 +49,10 @@ THE SOFTWARE.
 static inline void BarUiDoSkipSong (struct audioPlayer *player) {
 	assert (player != NULL);
 
-	if (player->mode != PLAYER_FINISHED_PLAYBACK && player->mode != PLAYER_FREED) {
-		pthread_cancel (player->thread);
-	}
+	player->doQuit = 1;
+	/* unlocking an unlocked mutex is forbidden by some implementations */
+	pthread_mutex_trylock (&player->pauseMutex);
+	pthread_mutex_unlock (&player->pauseMutex);
 }
 
 /*	transform station if necessary to allow changes like rename, rate, ...
@@ -150,15 +147,14 @@ BarUiActCallback(BarUiActBanSong) {
 BarUiActCallback(BarUiActCreateStation) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
-	PianoRequestDataCreateStation_t reqData;
+	char *id = NULL;
 
-	reqData.id = BarUiSelectMusicId (app, NULL,
+	id = BarUiSelectMusicId (app, NULL,
 			"Create station from artist or title: ");
-	if (reqData.id != NULL) {
-		reqData.type = "mi";
+	if (id != NULL) {
 		BarUiMsg (&app->settings, MSG_INFO, "Creating station... ");
-		BarUiActDefaultPianoCall (PIANO_REQUEST_CREATE_STATION, &reqData);
-		free (reqData.id);
+		BarUiActDefaultPianoCall (PIANO_REQUEST_CREATE_STATION, id);
+		free (id);
 		BarUiActDefaultEventcmd ("stationcreate");
 	}
 }
@@ -168,16 +164,13 @@ BarUiActCallback(BarUiActCreateStation) {
 BarUiActCallback(BarUiActAddSharedStation) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
-	PianoRequestDataCreateStation_t reqData;
 	char stationId[50];
 
 	BarUiMsg (&app->settings, MSG_QUESTION, "Station id: ");
 	if (BarReadline (stationId, sizeof (stationId), "0123456789", &app->input,
 			BAR_RL_DEFAULT, -1) > 0) {
-		reqData.id = stationId;
-		reqData.type = "sh";
 		BarUiMsg (&app->settings, MSG_INFO, "Adding shared station... ");
-		BarUiActDefaultPianoCall (PIANO_REQUEST_CREATE_STATION, &reqData);
+		BarUiActDefaultPianoCall (PIANO_REQUEST_CREATE_STATION, stationId);
 		BarUiActDefaultEventcmd ("stationaddshared");
 	}
 }
@@ -347,12 +340,9 @@ BarUiActCallback(BarUiActMoveSong) {
 /*	pause
  */
 BarUiActCallback(BarUiActPause) {
-	if (app->player.paused) {
-		pthread_kill (app->player.thread, BAR_PLAYER_SIGCONT);
-		app->player.paused = false;
-	} else {
-		pthread_kill (app->player.thread, BAR_PLAYER_SIGSTOP);
-		app->player.paused = true;
+	/* already locked => unlock/unpause */
+	if (pthread_mutex_trylock (&app->player.pauseMutex) == EBUSY) {
+		pthread_mutex_unlock (&app->player.pauseMutex);
 	}
 }
 
@@ -495,9 +485,8 @@ BarUiActCallback(BarUiActSelectQuickMix) {
 /*	quit
  */
 BarUiActCallback(BarUiActQuit) {
-	/* cancels player thread */
-	BarUiDoSkipSong (&app->player);
 	app->doQuit = 1;
+	BarUiDoSkipSong (&app->player);
 }
 
 /*	song history
