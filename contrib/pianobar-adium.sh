@@ -14,3 +14,4 @@ stty "$term"
 term=$(stty -g)
 trap cleanup SIGINT
 pianobar
+cleanup
