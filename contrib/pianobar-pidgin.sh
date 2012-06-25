@@ -4,8 +4,10 @@ cleanup()
 {
 # unset status on exit
 purple-remote "setstatus?message="
-reset
+stty "$term"
 }
 
+term=$(stty -g)
 trap cleanup SIGINT
 pianobar
+cleanup
