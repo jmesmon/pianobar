@@ -44,5 +44,7 @@ typedef struct {
 	BarReadlineFds_t input;
 } BarApp_t;
 
+void BarUpdateScale (BarApp_t *app);
+
 #endif /* _MAIN_H */
 

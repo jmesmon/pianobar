@@ -263,6 +263,9 @@ BarUiActCallback(BarUiActStationFromGenre) {
 /*	print verbose song information
  */
 BarUiActCallback(BarUiActSongInfo) {
+    PianoReturn_t pRet = PIANO_RET_OK;
+    WaitressReturn_t wRet = WAITRESS_RET_OK;
+
 	assert (selStation != NULL);
 	assert (selSong != NULL);
 
@@ -272,6 +275,8 @@ BarUiActCallback(BarUiActSongInfo) {
 			selStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations, selSong->stationId) :
 			NULL);
+
+    BarUiActDefaultEventcmd ("songinfo");
 }
 
 /*	print some debugging information
@@ -323,6 +328,7 @@ BarUiActCallback(BarUiActLoveSong) {
 	PianoRequestDataRateSong_t reqData;
 	reqData.song = selSong;
 	reqData.rating = PIANO_RATE_LOVE;
+    	app->player.download.loveSong = 1;
 
 	BarUiMsg (&app->settings, MSG_INFO, "Loving song... ");
 	BarUiActDefaultPianoCall (PIANO_REQUEST_RATE_SONG, &reqData);
@@ -549,20 +555,30 @@ BarUiActCallback(BarUiActBookmark) {
 	}
 }
 
+
 /*	decrease volume
  */
 BarUiActCallback(BarUiActVolDown) {
 	--app->settings.volume;
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+	BarUpdateScale (app);
+	BarUiMsg (&app->settings, MSG_INFO, "volume: %d\n", app->settings.volume);
 }
 
 /*	increase volume
  */
 BarUiActCallback(BarUiActVolUp) {
 	++app->settings.volume;
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
+	BarUpdateScale (app);
+	BarUiMsg (&app->settings, MSG_INFO, "volume: %d\n", app->settings.volume);
+}
+
+BarUiActCallback(BarUiActVolMute) {
+	app->settings.mute = !app->settings.mute;
+	BarUpdateScale (app);
+	if (app->settings.mute)
+		BarUiMsg (&app->settings, MSG_INFO, "mutted\n");
+	else
+		BarUiMsg (&app->settings, MSG_INFO, "unmuted\n");
 }
 
 BarUiActCallback(BarUiActGainToggle) {
@@ -687,4 +703,3 @@ BarUiActCallback(BarUiActManageStation) {
 
 	PianoDestroyStationInfo (&reqData.info);
 }
-

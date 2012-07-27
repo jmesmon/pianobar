@@ -44,6 +44,7 @@ THE SOFTWARE.
 #include <waitress.h>
 
 #include "settings.h"
+#include "download.h"
 
 #define BAR_PLAYER_MS_TO_S_FACTOR 1000
 #define BAR_PLAYER_BUFSIZE (WAITRESS_BUFFER_SIZE*2)
@@ -98,10 +99,13 @@ struct audioPlayer {
 
 	/* audio out */
 	ao_device *audioOutDevice;
-	const BarSettings_t *settings;
 
 	unsigned char *buffer;
 
+	BarDownload_t download;
+
+	const BarSettings_t *settings;
+	bool paused;
 	pthread_mutex_t pauseMutex;
 	WaitressHandle_t waith;
 };

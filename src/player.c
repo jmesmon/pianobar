@@ -34,6 +34,32 @@ THE SOFTWARE.
 #include "config.h"
 #include "ui.h"
 #include "ui_types.h"
+#include "download.h"
+
+static void BarDownloadWrite(struct audioPlayer *player, const void *data, size_t size) {
+	if (player->download.handle != NULL) {
+		fwrite(data, size, 1, player->download.handle);
+	}
+}
+
+static void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
+	if (player->download.handle!= NULL) {
+		fclose(player->download.handle);
+		player->download.handle = NULL;
+		if (wRet == WAITRESS_RET_OK) {
+			// Only "commit" download if everything downloaded okay
+			if (player->download.loveSong) {
+				rename(player->download.downloadingFilename, player->download.lovedFilename);
+			} else {
+				rename(player->download.downloadingFilename, player->download.unlovedFilename);
+			}
+		} else {
+			if (player->download.cleanup) {
+				unlink(player->download.downloadingFilename);
+			}
+		}
+	}
+}
 
 #define bigToHostEndian32(x) ntohl(x)
 
@@ -124,6 +150,7 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size,
 	const char *data = ptr;
 	struct audioPlayer *player = stream;
 
+	BarDownloadWrite (player, data, size);
 	QUIT_PAUSE_CHECK;
 
 	if (!BarPlayerBufferFill (player, data, size)) {
@@ -317,6 +344,7 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size,
 	struct audioPlayer *player = stream;
 	size_t i;
 
+	BarDownloadWrite (player, data, size);
 	QUIT_PAUSE_CHECK;
 
 	if (!BarPlayerBufferFill (player, data, size)) {
@@ -462,7 +490,7 @@ void *BarPlayerThread (void *data) {
 			return PLAYER_RET_OK;
 			break;
 	}
-	
+
 	player->mode = PLAYER_INITIALIZED;
 
 	/* This loop should work around song abortions by requesting the
@@ -498,6 +526,8 @@ void *BarPlayerThread (void *data) {
 	if (player->aoError) {
 		ret = (void *) PLAYER_RET_ERR;
 	}
+
+	BarDownloadFinish (player, wRet);
 
 	ao_close(player->audioOutDevice);
 	WaitressFree (&player->waith);
