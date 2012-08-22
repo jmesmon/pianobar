@@ -95,12 +95,12 @@ static const BarUiDispatchAction_t dispatchActions[BAR_KS_COUNT] = {
 				"act_volup"},
 		{'=', BAR_DC_STATION, BarUiActManageStation, "delete seeds/feedback",
 				"act_managestation"},
-        {'!', BAR_DC_GLOBAL, BarUiActGainToggle, "toggle replay gain",
-                "act_gain"},
 		{' ', BAR_DC_GLOBAL | BAR_DC_STATION, BarUiActPause, NULL,
 				"act_songpause2"},
 		{'v', BAR_DC_SONG, BarUiActCreateStationFromSong,
 				"create new station from song or artist", "act_stationcreatefromsong"},
+		{'!', BAR_DC_GLOBAL, BarUiActGainToggle, "toggle replay gain",
+				"act_gain"},
 		};
 
 #include <piano.h>

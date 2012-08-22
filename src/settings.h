@@ -57,7 +57,7 @@ typedef enum {
 	BAR_KS_MANAGESTATION,
 	BAR_KS_PLAYPAUSE2,
 	BAR_KS_CREATESTATIONFROMSONG,
-    BAR_KS_GAINTOGGLE,
+	BAR_KS_GAINTOGGLE,
 	/* insert new shortcuts _before_ this element */
 	BAR_KS_COUNT,
 } BarKeyShortcutId_t;
@@ -86,7 +86,7 @@ typedef struct {
 	bool autoselect;
 	unsigned int history;
 	int volume;
-    bool noReplayGain;
+	bool noReplayGain;
 	BarStationSorting_t sortOrder;
 	PianoAudioQuality_t audioQuality;
 	char *username;
