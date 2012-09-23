@@ -261,6 +261,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 				settings->atIcon = strdup (val);
 			} else if (streq ("volume", key)) {
 				settings->volume = atoi (val);
+			} else if (streq ("no_reply_gain", key)) {
+				settings->noReplayGain = atoi (val);
 			} else if (streq ("format_nowplaying_song", key)) {
 				free (settings->npSongFormat);
 				settings->npSongFormat = strdup (val);
