@@ -294,6 +294,14 @@ void BarSettingsRead (BarSettings_t *settings) {
 				settings->startPaused = atoi (val);
 			} else if (streq ("autoselect", key)) {
 				settings->autoselect = atoi (val);
+			} else if (streq ("download", key)) {
+				settings->download = strdup (val);
+			} else if (streq ("download_safe_filename", key)) {
+				settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
+			} else if (streq ("download_separator", key)) {
+				settings->downloadSeparator = strdup (val);
+			} else if (streq ("download_cleanup", key)) {
+			    settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 			} else if (streq ("tls_fingerprint", key)) {
 				/* expects 40 byte hex-encoded sha1 */
 				if (strlen (val) == 40) {
@@ -335,14 +343,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 					}
 				}
 			}
-		} else if (streq ("download", key)) {
-			settings->download = strdup (val);
-		} else if (streq ("download_safe_filename", key)) {
-			settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
-		} else if (streq ("download_separator", key)) {
-			settings->downloadSeparator = strdup (val);
-		} else if (streq ("download_cleanup", key)) {
-		    settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 		}
 
 		fclose (configfd);
