@@ -116,10 +116,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
  *	@return nothing yet
  */
 void BarSettingsRead (BarSettings_t *settings) {
-	char *configfiles[] = {PACKAGE "/state", PACKAGE "/config"},
-			path[PATH_MAX], key[256], val[256];
-	FILE *configfd;
-	static const char *formatMsgPrefix = "format_msg_";
+	char *configfiles[] = {PACKAGE "/state", PACKAGE "/config"};
 
 	assert (sizeof (settings->keys) / sizeof (*settings->keys) ==
 			sizeof (dispatchActions) / sizeof (*dispatchActions));
@@ -179,6 +176,10 @@ void BarSettingsRead (BarSettings_t *settings) {
 
 	/* read config files */
 	for (size_t j = 0; j < sizeof (configfiles) / sizeof (*configfiles); j++) {
+		static const char *formatMsgPrefix = "format_msg_";
+		char key[256], val[256], path[PATH_MAX];
+		FILE *configfd;
+
 		BarGetXdgConfigDir (configfiles[j], path, sizeof (path));
 		if ((configfd = fopen (path, "r")) == NULL) {
 			continue;
@@ -343,6 +344,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 		} else if (streq ("download_cleanup", key)) {
 		    settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 		}
+
+		fclose (configfd);
 	}
 
 	/* check environment variable if proxy is not set explicitly */
@@ -352,8 +355,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->proxy = strdup (tmpProxy);
 		}
 	}
-
-	fclose (configfd);
 }
 
 /*	write statefile
