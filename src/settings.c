@@ -87,6 +87,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->proxy);
 	free (settings->username);
 	free (settings->password);
+	free (settings->passwordCmd);
 	free (settings->autostartStation);
 	free (settings->eventCmd);
 	free (settings->loveIcon);
@@ -202,6 +203,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 				settings->username = strdup (val);
 			} else if (streq ("password", key)) {
 				settings->password = strdup (val);
+			} else if (streq ("password_command", key)) {
+				settings->passwordCmd = strdup (val);
 			} else if (streq ("rpc_host", key)) {
 				free (settings->rpcHost);
 				settings->rpcHost = strdup (val);
