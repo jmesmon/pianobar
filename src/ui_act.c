@@ -122,11 +122,18 @@ BarUiActCallback(BarUiActAddMusic) {
 BarUiActCallback(BarUiActBanSong) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
+	PianoStation_t *realStation;
 
 	assert (selStation != NULL);
 	assert (selSong != NULL);
+	assert (selSong->stationId != NULL);
 
-	if (!BarTransformIfShared (app, selStation)) {
+	if ((realStation = PianoFindStationById (app->ph.stations,
+			selSong->stationId)) == NULL) {
+		assert (0);
+		return;
+	}
+	if (!BarTransformIfShared (app, realStation)) {
 		return;
 	}
 
@@ -219,7 +226,7 @@ BarUiActCallback(BarUiActDeleteStation) {
 	assert (selStation != NULL);
 
 	BarUiMsg (&app->settings, MSG_QUESTION, "Really delete \"%s\"? [yN] ",
-			app->curStation->name);
+			selStation->name);
 	if (BarReadlineYesNo (false, &app->input)) {
 		BarUiMsg (&app->settings, MSG_INFO, "Deleting station... ");
 		if (BarUiActDefaultPianoCall (PIANO_REQUEST_DELETE_STATION,
@@ -312,11 +319,18 @@ BarUiActCallback(BarUiActDebug) {
 BarUiActCallback(BarUiActLoveSong) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
+	PianoStation_t *realStation;
 
 	assert (selStation != NULL);
 	assert (selSong != NULL);
+	assert (selSong->stationId != NULL);
 
-	if (!BarTransformIfShared (app, selStation)) {
+	if ((realStation = PianoFindStationById (app->ph.stations,
+			selSong->stationId)) == NULL) {
+		assert (0);
+		return;
+	}
+	if (!BarTransformIfShared (app, realStation)) {
 		return;
 	}
 
