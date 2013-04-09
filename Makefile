@@ -78,19 +78,18 @@ ifeq (${DISABLE_MAD}, 1)
 	LIBMAD_CFLAGS=
 	LIBMAD_LDFLAGS=
 else
-	LIBMAD_CFLAGS=-DENABLE_MAD
-	LIBMAD_CFLAGS+=$(shell pkg-config --cflags mad)
-	LIBMAD_LDFLAGS=$(shell pkg-config --libs mad)
+	LIBMAD_CFLAGS:=-DENABLE_MAD $(shell pkg-config --cflags mad)
+	LIBMAD_LDFLAGS:=$(shell pkg-config --libs mad)
 endif
 
-LIBGNUTLS_CFLAGS=$(shell pkg-config --cflags gnutls)
-LIBGNUTLS_LDFLAGS=$(shell pkg-config --libs gnutls)
+LIBGNUTLS_CFLAGS:=$(shell pkg-config --cflags gnutls)
+LIBGNUTLS_LDFLAGS:=$(shell pkg-config --libs gnutls)
 
 LIBGCRYPT_CFLAGS=
 LIBGCRYPT_LDFLAGS=-lgcrypt
 
-LIBJSONC_CFLAGS=$(shell pkg-config --cflags json)
-LIBJSONC_LDFLAGS=$(shell pkg-config --libs json)
+LIBJSONC_CFLAGS:=$(shell pkg-config --cflags json)
+LIBJSONC_LDFLAGS:=$(shell pkg-config --libs json)
 
 # build pianobar
 ifeq (${DYNLINK},1)
