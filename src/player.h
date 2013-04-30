@@ -70,7 +70,7 @@ struct audioPlayer {
 
 	unsigned int scale;
 	float gain;
-    bool noGain;
+	bool noGain;
 
 	/* duration and already played time; measured in milliseconds */
 	unsigned long int songDuration;
