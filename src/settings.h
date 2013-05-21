@@ -86,7 +86,7 @@ typedef struct {
 typedef struct {
 	bool startPaused;
 	bool autoselect;
-	unsigned int history;
+	unsigned int history, maxPlayerErrors;
 	int volume;
 	bool noReplayGain;
 	BarStationSorting_t sortOrder;
