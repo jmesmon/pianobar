@@ -425,15 +425,6 @@ static void BarMainGetPlaylist (BarApp_t *app) {
 			pRet, wRet);
 }
 
-void BarUpdateScale (BarApp_t *app) {
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	if (app->settings.mute) {
-		app->player.scale = 0;
-	} else {
-		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
-	}
-}
-
 /*	start new player thread
  */
 static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
@@ -457,7 +448,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
 
 		app->player.noGain = app->settings.noReplayGain;
 		app->player.gain    = app->playlist->fileGain;
-		BarUpdateScale (app);
+		BarUiActUpdateScale (app);
 		app->player.audioFormat = app->playlist->audioFormat;
 		app->player.settings = &app->settings;
 		pthread_mutex_init (&app->player.pauseMutex, NULL);
@@ -638,8 +629,14 @@ int main (int argc, char **argv) {
 	BarSettingsInit (&app.settings);
 	BarSettingsRead (&app.settings);
 
-	PianoInit (&app.ph, app.settings.partnerUser, app.settings.partnerPassword,
-			app.settings.device, app.settings.inkey, app.settings.outkey);
+	PianoReturn_t pret;
+	if ((pret = PianoInit (&app.ph, app.settings.partnerUser,
+			app.settings.partnerPassword, app.settings.device,
+			app.settings.inkey, app.settings.outkey)) != PIANO_RET_OK) {
+		BarUiMsg (&app.settings, MSG_ERR, "Initialization failed:"
+				" %s\n", PianoErrorToStr (pret));
+		return 0;
+	}
 
 	BarUiMsg (&app.settings, MSG_NONE,
 			"Welcome to " PACKAGE " (" VERSION ")! ");

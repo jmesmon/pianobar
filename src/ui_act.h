@@ -60,7 +60,10 @@ BarUiActCallback(BarUiActBookmark);
 BarUiActCallback(BarUiActVolDown);
 BarUiActCallback(BarUiActVolUp);
 BarUiActCallback(BarUiActManageStation);
+BarUiActCallback(BarUiActVolReset);
 BarUiActCallback(BarUiActGainToggle);
 BarUiActCallback(BarUiActVolMute);
+
+void BarUiActUpdateScale (BarApp_t *app);
 
 #endif /* _UI_ACT_H */
