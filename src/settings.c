@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include <limits.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <wordexp.h>
 
 #include <piano.h>
 
@@ -306,7 +307,10 @@ void BarSettingsRead (BarSettings_t *settings) {
 			} else if (streq ("autoselect", key)) {
 				settings->autoselect = atoi (val);
 			} else if (streq ("download", key)) {
-				settings->download = strdup (val);
+				wordexp_t p;
+				if (!wordexp(val, &p, 0))
+				    settings->download = strdup (p.we_wordv[0]);
+				wordfree(&p);
 			} else if (streq ("download_safe_filename", key)) {
 				settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 			} else if (streq ("download_separator", key)) {
