@@ -190,14 +190,18 @@ void BarDownloadWrite(struct audioPlayer *player, const void *data, size_t size)
 	struct io_queue *ioq = &d->io_ctx;
 	pthread_mutex_lock(&ioq->mutex);
 	high = ioq->high;
-	while (CIRC_FULL(ioq->head, ioq->tail, IOP_CT))
+	while (CIRC_FULL(ioq->head, ioq->tail, IOP_CT)) {
+		fprintf(stderr, "CIRC_FULL head: %zu tail: %zu\n", ioq->head, ioq->tail);
 		pthread_cond_wait(&ioq->cond, &ioq->mutex);
+	}
 
 	struct io_op *iop = &ioq->iops[ioq->head];
 	iop->type = IO_TYPE_WRITE;
 	iop->data.write.data = memdup(data, size);
 	iop->data.write.len  = size;
 
+	if (CIRC_EMPTY(ioq->head, ioq->tail, IOP_CT))
+		pthread_cond_signal(&ioq->cond);
 	ioq->head = CIRC_NEXT(ioq->head, IOP_CT);
 	pthread_mutex_unlock(&ioq->mutex);
 
@@ -253,6 +257,7 @@ void *io_thread(void *v) {
 				return NULL;
 			case IO_TYPE_WRITE:
 				fwrite(iop->data.write.data, iop->data.write.len, 1, d->handle);
+				free(iop->data.write.data);
 				break;
 			default:
 				/* racy, but we don't care */
