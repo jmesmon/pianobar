@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "settings.h"
 #include "ui_readline.h"
 
-typedef struct {
+typedef struct BarApp_t {
 	PianoHandle_t ph;
 	WaitressHandle_t waith;
 	struct audioPlayer player;
