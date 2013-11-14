@@ -197,17 +197,14 @@ void BarDownloadStart(BarApp_t *app) {
 
     if (! app->settings.download) {
         /* No download directory set, so return */
-	BarUiMsg (&app->settings, MSG_ERR,
-			"Error: Download directory not set\n");
         return;
     }
 
     BarDownloadFilename(app);
 
-    if (access(app->player.download.downloadingFilename, R_OK) != 0) {
-        app->player.download.handle = fopen(app->player.download.downloadingFilename, "w");
-    } else {
-        app->player.download.handle = NULL;
+    app->player.download.handle = fopen(app->player.download.downloadingFilename, "w");
+    if (!app->player.download.handle) {
+	BarUiMsg (&app->settings, MSG_ERR, "Could not open file %s to save to", app->player.download.downloadingFilename);
     }
 }
 
