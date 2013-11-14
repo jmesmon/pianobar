@@ -185,11 +185,11 @@ void BarDownloadWrite(struct audioPlayer *player, const void *data, size_t size)
 	if (!is_downloading(d))
 		return;
 
-	size_t high;
-
 	struct io_queue *ioq = &d->io_ctx;
 	pthread_mutex_lock(&ioq->mutex);
-	high = ioq->high;
+	size_t curr = CIRC_CNT(ioq->head, ioq->tail, IOP_CT);
+	if (curr > ioq->high)
+		ioq->high = curr;
 	while (CIRC_FULL(ioq->head, ioq->tail, IOP_CT)) {
 		fprintf(stderr, "CIRC_FULL head: %zu tail: %zu\n", ioq->head, ioq->tail);
 		pthread_cond_wait(&ioq->cond, &ioq->mutex);
@@ -204,8 +204,6 @@ void BarDownloadWrite(struct audioPlayer *player, const void *data, size_t size)
 		pthread_cond_signal(&ioq->cond);
 	ioq->head = CIRC_NEXT(ioq->head, IOP_CT);
 	pthread_mutex_unlock(&ioq->mutex);
-
-	fprintf(stderr, "HIGH WATERMARK: %zu\n", high);
 }
 
 static void io_queue_join(struct io_queue *ioq)
@@ -215,11 +213,14 @@ static void io_queue_join(struct io_queue *ioq)
 		pthread_cond_wait(&ioq->cond, &ioq->mutex);
 	struct io_op *iop = &ioq->iops[ioq->head];
 	iop->type = IO_TYPE_EXIT;
+	if (CIRC_EMPTY(ioq->head, ioq->tail, IOP_CT))
+		pthread_cond_signal(&ioq->cond);
 	ioq->head = CIRC_NEXT(ioq->head, IOP_CT);
 	pthread_mutex_unlock(&ioq->mutex);
 	pthread_join(ioq->thread, NULL);
 }
 
+static size_t high_watermark;
 void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 	BarDownload_t *d = &player->download;
 	if (!is_downloading(d))
@@ -230,6 +231,9 @@ void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 
 	fclose(d->handle);
 	d->handle = NULL;
+
+	if (d->io_ctx.high > high_watermark)
+		high_watermark = d->io_ctx.high;
 
 	if (wRet == WAITRESS_RET_OK) {
 		// Only "commit" download if everything downloaded okay
@@ -297,6 +301,7 @@ void BarDownloadStart(BarApp_t *app) {
 	pthread_mutex_init(&d->io_ctx.mutex, NULL);
 	pthread_cond_init(&d->io_ctx.cond, NULL);
 	pthread_create(&d->io_ctx.thread, NULL, io_thread, app);
+	BarUiMsg(&app->settings, MSG_ERR, "high watermark: %zu", high_watermark);
 }
 
 void BarDownloadCleanup(BarApp_t *app)
