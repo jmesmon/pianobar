@@ -305,7 +305,7 @@ void BarDownloadStart(BarApp_t *app) {
 	pthread_mutex_init(&d->io_ctx.mutex, NULL);
 	pthread_cond_init(&d->io_ctx.cond, NULL);
 	pthread_create(&d->io_ctx.thread, NULL, io_thread, app);
-	BarUiMsg(&app->settings, MSG_ERR, "high watermark: %zu", high_watermark);
+	BarUiMsg(&app->settings, MSG_ERR, "high watermark: %zu\n", high_watermark);
 }
 
 void BarDownloadCleanup(BarApp_t *app)
