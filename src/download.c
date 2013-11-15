@@ -258,6 +258,10 @@ void *io_thread(void *v) {
 		struct io_op *iop = &io->iops[io->tail];
 		switch(iop->type) {
 			case IO_TYPE_EXIT:
+				if (CIRC_FULL(io->head, io->tail, IOP_CT))
+					pthread_cond_signal(&io->cond);
+				io->tail = CIRC_NEXT(io->tail, IOP_CT);
+				pthread_mutex_unlock(&io->mutex);
 				return NULL;
 			case IO_TYPE_WRITE:
 				fwrite(iop->data.write.data, iop->data.write.len, 1, d->handle);
