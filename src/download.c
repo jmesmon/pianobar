@@ -243,6 +243,8 @@ void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 			rename(d->downloadingFilename, d->unlovedFilename);
 	} else if (d->cleanup)
 		unlink(d->downloadingFilename);
+
+	BarUiMsg(player->settings, MSG_INFO, "this song: writes:%zu, high watermark:%zu; overall watermark %zu\n", d->io_ctx.processed, d->io_ctx.high, high_watermark);
 }
 
 void *io_thread(void *v) {
@@ -264,6 +266,7 @@ void *io_thread(void *v) {
 				pthread_mutex_unlock(&io->mutex);
 				return NULL;
 			case IO_TYPE_WRITE:
+				io->processed++;
 				fwrite(iop->data.write.data, iop->data.write.len, 1, d->handle);
 				free(iop->data.write.data);
 				break;
@@ -305,7 +308,6 @@ void BarDownloadStart(BarApp_t *app) {
 	pthread_mutex_init(&d->io_ctx.mutex, NULL);
 	pthread_cond_init(&d->io_ctx.cond, NULL);
 	pthread_create(&d->io_ctx.thread, NULL, io_thread, app);
-	BarUiMsg(&app->settings, MSG_ERR, "high watermark: %zu\n", high_watermark);
 }
 
 void BarDownloadCleanup(BarApp_t *app)

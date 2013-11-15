@@ -23,7 +23,7 @@ struct io_op {
 /* With a bare 'fwrite()', IO load on the system can cause audio stalls. Queue
  * blocks to be written instead and write them out in a seperate thread */
 struct io_queue {
-    size_t head, tail, high;
+    size_t head, tail, high, processed;
     struct io_op iops[IOP_CT];
     pthread_cond_t cond;
     /* the mutex is theoretically not required */
