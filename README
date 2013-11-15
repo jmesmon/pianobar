@@ -4,7 +4,7 @@ pianobar-dl
 pianobar-dl is a modified version of pianobar that will store played music
 on disk if you have the following config variable set:
 
-    download = /path/to/download/directory
+    download = /path/to/download/directory/with/$ENV_VARS/if/you/want
 
 In addition, you can configure the artist/album/title separator and whether the filename is
 "normalized" with the following
