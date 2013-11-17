@@ -257,30 +257,30 @@ void *io_thread(void *v) {
 		while (CIRC_EMPTY(io->head, io->tail, IOP_CT))
 			pthread_cond_wait(&io->cond, &io->mutex);
 
-		struct io_op *iop = &io->iops[io->tail];
-		switch(iop->type) {
+		/* copy the iop */
+		struct io_op iop = io->iops[io->tail];
+
+		/* advance the circular buffer */
+		if (CIRC_FULL(io->head, io->tail, IOP_CT))
+			pthread_cond_signal(&io->cond);
+
+		io->tail = CIRC_NEXT(io->tail, IOP_CT);
+		pthread_mutex_unlock(&io->mutex);
+
+		/* process the iop */
+		switch(iop.type) {
 			case IO_TYPE_EXIT:
-				if (CIRC_FULL(io->head, io->tail, IOP_CT))
-					pthread_cond_signal(&io->cond);
-				io->tail = CIRC_NEXT(io->tail, IOP_CT);
-				pthread_mutex_unlock(&io->mutex);
 				return NULL;
 			case IO_TYPE_WRITE:
 				io->processed++;
-				fwrite(iop->data.write.data, iop->data.write.len, 1, d->handle);
-				free(iop->data.write.data);
+				fwrite(iop.data.write.data, iop.data.write.len, 1, d->handle);
+				free(iop.data.write.data);
 				break;
 			default:
 				/* racy, but we don't care */
 				BarUiMsg(&app->settings, MSG_ERR, "io_thread failure");
 				abort();
 		}
-
-		if (CIRC_FULL(io->head, io->tail, IOP_CT))
-			pthread_cond_signal(&io->cond);
-
-		io->tail = CIRC_NEXT(io->tail, IOP_CT);
-		pthread_mutex_unlock(&io->mutex);
 	}
 }
 
