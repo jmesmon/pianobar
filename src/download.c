@@ -230,12 +230,14 @@ void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 	io_queue_join(&d->io_ctx);
 
 	fclose(d->handle);
+	pthread_cond_destroy(&d->io_ctx.cond);
+	pthread_mutex_destroy(&d->io_ctx.mutex);
 	d->handle = NULL;
 
 	if (d->io_ctx.high > high_watermark)
 		high_watermark = d->io_ctx.high;
 
-	if (wRet == WAITRESS_RET_OK) {
+	if (wRet == WAITRESS_RET_OK && d->handle) {
 		// Only "commit" download if everything downloaded okay
 		if (d->loveSong)
 			rename(d->downloadingFilename, d->lovedFilename);
