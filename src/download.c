@@ -273,7 +273,8 @@ void *io_thread(void *v) {
 				return NULL;
 			case IO_TYPE_WRITE:
 				io->processed++;
-				fwrite(iop.data.write.data, iop.data.write.len, 1, d->handle);
+				if (d->handle)
+					fwrite(iop.data.write.data, iop.data.write.len, 1, d->handle);
 				free(iop.data.write.data);
 				break;
 			default:
@@ -301,9 +302,11 @@ void BarDownloadStart(BarApp_t *app) {
 	BarDownloadFilename(app);
 
 	d->handle = fopen(d->downloadingFilename, "w");
-	if (!d->handle)
-		BarUiMsg (&app->settings, MSG_ERR, "Could not open file %s to save to",
-				d->downloadingFilename);
+	if (!d->handle) {
+		BarUiMsg (&app->settings, MSG_ERR, "Could not open file \"%s\" (%zu chars) to save to",
+				d->downloadingFilename, strlen(d->downloadingFilename));
+		/* TODO: we probably have a file name that is too long, shorten it */
+	}
 
 	pthread_mutex_init(&d->io_ctx.mutex, NULL);
 	pthread_cond_init(&d->io_ctx.cond, NULL);
