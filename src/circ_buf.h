@@ -8,7 +8,7 @@
 #define CIRC_CNT(head,tail,size) (((head) - (tail)) & ((size)- 1))
 
 /* space remaining in circ_buf */
-#define CIRC_SPACE(head,tail,size) CIRC_CNT((tail),((head)+1),(size))
+#define CIRC_SPACE(head,tail,size) CIRC_CNT(tail , (head)+1, size)
 
 /* is circ_buf full */
 #define CIRC_FULL(head,tail,size) (CIRC_NEXT(head,size) == (tail))

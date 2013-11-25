@@ -308,6 +308,7 @@ void BarDownloadStart(BarApp_t *app) {
 		BarUiMsg (&app->settings, MSG_ERR, "Could not open file \"%s\" (%zu chars) to save to",
 				d->downloadingFilename, strlen(d->downloadingFilename));
 		/* TODO: we probably have a file name that is too long, shorten it */
+		return;
 	}
 
 	pthread_mutex_init(&d->io_ctx.mutex, NULL);
