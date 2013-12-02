@@ -26,6 +26,7 @@ endif
 
 PIANOBAR_DIR:=src
 PIANOBAR_SRC:=\
+		${PIANOBAR_DIR}/download.c \
 		${PIANOBAR_DIR}/main.c \
 		${PIANOBAR_DIR}/player.c \
 		${PIANOBAR_DIR}/settings.c \
