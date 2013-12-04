@@ -64,7 +64,6 @@ typedef enum {
 	WAITRESS_RET_OK,
 	WAITRESS_RET_CB_ABORT,
 	/* http error codes */
-	WAITRESS_RET_STATUS_UNKNOWN,
 	WAITRESS_RET_NOTFOUND,
 	WAITRESS_RET_FORBIDDEN,
 	WAITRESS_RET_BAD_REQUEST,
@@ -82,6 +81,8 @@ typedef enum {
 	WAITRESS_RET_DECODING_ERR,
 	WAITRESS_RET_TLS_HANDSHAKE_ERR,
 	WAITRESS_RET_TLS_FINGERPRINT_MISMATCH,
+	/* http error code, unknown (must be last) */
+	WAITRESS_RET_STATUS_UNKNOWN,
 } WaitressReturn_t;
 
 /*	reusable handle
