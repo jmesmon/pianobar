@@ -648,20 +648,11 @@ BarUiActCallback(BarUiActBookmark) {
 	}
 }
 
-void BarUiActUpdateScale (BarApp_t *app) {
-	/* FIXME: assuming unsigned integer store is atomic operation */
-	if (app->settings.mute) {
-		app->player.scale = 0;
-	} else {
-		app->player.scale = BarPlayerCalcScale (app->player.gain + app->settings.volume);
-	}
-}
-
 /*	decrease volume
  */
 BarUiActCallback(BarUiActVolDown) {
 	--app->settings.volume;
-	BarUiActUpdateScale (app);
+	BarPlayerUpdateScale (&app->player);
 	BarUiMsg (&app->settings, MSG_INFO, "volume: %d\n", app->settings.volume);
 }
 
@@ -669,13 +660,13 @@ BarUiActCallback(BarUiActVolDown) {
  */
 BarUiActCallback(BarUiActVolUp) {
 	++app->settings.volume;
-	BarUiActUpdateScale (app);
+	BarPlayerUpdateScale (&app->player);
 	BarUiMsg (&app->settings, MSG_INFO, "volume: %d\n", app->settings.volume);
 }
 
 BarUiActCallback(BarUiActVolMute) {
 	app->settings.mute = !app->settings.mute;
-	BarUiActUpdateScale (app);
+	BarPlayerUpdateScale (&app->player);
 	if (app->settings.mute)
 		BarUiMsg (&app->settings, MSG_INFO, "mutted\n");
 	else
@@ -686,7 +677,7 @@ BarUiActCallback(BarUiActVolMute) {
  */
 BarUiActCallback(BarUiActVolReset) {
 	app->settings.volume = 0;
-	BarUiActUpdateScale (app);
+	BarPlayerUpdateScale (&app->player);
 }
 
 BarUiActCallback(BarUiActGainToggle) {

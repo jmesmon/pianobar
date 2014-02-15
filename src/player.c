@@ -127,6 +127,22 @@ static inline void BarPlayerBufferMove (struct audioPlayer *player) {
 	player->bufferFilled -= player->bufferRead;
 }
 
+void BarPlayerUpdateScale (struct audioPlayer *player) {
+	/* FIXME: assuming unsigned integer store is atomic operation */
+	if (player->settings->mute || player->songIsAd) {
+		player->scale = 0;
+	} else {
+		player->scale = BarPlayerCalcScale (player->gain + player->settings->volume);
+	}
+}
+
+static void BarPlayerSetSongDuration (struct audioPlayer *player, unsigned long duration) {
+	player->songDuration = duration;
+	player->songIsAd = duration == 30;
+	BarPlayerUpdateScale(player);
+	BarUiMsg (player->settings, MSG_ERR, "DURATION: %d AD: %d", duration, player->songIsAd);
+}
+
 #ifdef ENABLE_FAAD
 
 /*	play aac stream
@@ -283,10 +299,11 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size,
 					 * calculation: channels * number of frames * samples per
 					 * frame / samplerate */
 					/* FIXME: Hard-coded number of samples per frame */
-					player->songDuration = (unsigned long long int) player->sampleSizeN *
+					BarPlayerSetSongDuration(player,
+							(unsigned long long int) player->sampleSizeN *
 							4096LL * (unsigned long long int) BAR_PLAYER_MS_TO_S_FACTOR /
 							(unsigned long long int) player->samplerate /
-							(unsigned long long int) player->channels;
+							(unsigned long long int) player->channels);
 					break;
 				} else {
 					memcpy (&player->sampleSize[player->sampleSizeCurr],
@@ -418,13 +435,16 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size,
 			}
 
 			/* calc song length using the framerate of the first decoded frame */
-			player->songDuration = (unsigned long long int) player->waith.request.contentLength /
+			BarPlayerSetSongDuration(player,
+					(unsigned long long int) player->waith.request.contentLength /
 					((unsigned long long int) player->mp3Frame.header.bitrate /
-					(unsigned long long int) BAR_PLAYER_MS_TO_S_FACTOR / 8LL);
+					(unsigned long long int) BAR_PLAYER_MS_TO_S_FACTOR / 8LL));
 
 			/* must be > PLAYER_SAMPLESIZE_INITIALIZED, otherwise time won't
 			 * be visible to user (ugly, but mp3 decoding != aac decoding) */
 			player->mode = PLAYER_RECV_DATA;
+
+
 		}
 		/* samples * length * channels */
 		ao_play (player->audioOutDevice, (char *) madDecoded,

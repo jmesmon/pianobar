@@ -75,6 +75,7 @@ struct audioPlayer {
 	/* duration and already played time; measured in milliseconds */
 	unsigned long int songDuration;
 	unsigned long int songPlayed;
+	bool songIsAd;
 
 	unsigned long samplerate;
 
@@ -116,5 +117,6 @@ enum {PLAYER_RET_OK = 0, PLAYER_RET_HARDFAIL = 1, PLAYER_RET_SOFTFAIL = 2};
 
 void *BarPlayerThread (void *data);
 unsigned int BarPlayerCalcScale (float);
+void BarPlayerUpdateScale (struct audioPlayer *player);
 
 #endif /* _PLAYER_H */

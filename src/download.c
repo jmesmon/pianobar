@@ -221,34 +221,6 @@ static void io_queue_join(struct io_queue *ioq)
 }
 
 static size_t high_watermark;
-void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
-	BarDownload_t *d = &player->download;
-	if (!is_downloading(d))
-		return;
-
-	/* Stop the io_thread */
-	io_queue_join(&d->io_ctx);
-
-	fclose(d->handle);
-	pthread_cond_destroy(&d->io_ctx.cond);
-	pthread_mutex_destroy(&d->io_ctx.mutex);
-	d->handle = NULL;
-
-	if (d->io_ctx.high > high_watermark)
-		high_watermark = d->io_ctx.high;
-
-	if (wRet == WAITRESS_RET_OK && d->handle) {
-		// Only "commit" download if everything downloaded okay
-		if (d->loveSong)
-			rename(d->downloadingFilename, d->lovedFilename);
-		else
-			rename(d->downloadingFilename, d->unlovedFilename);
-	} else if (d->cleanup)
-		unlink(d->downloadingFilename);
-
-	BarUiMsg(player->settings, MSG_INFO, "this song: writes:%zu, high watermark:%zu; overall watermark %zu\n", d->io_ctx.processed, d->io_ctx.high, high_watermark);
-}
-
 void *io_thread(void *v) {
 	BarApp_t *app = v;
 	BarDownload_t *d = &app->player.download;
@@ -325,6 +297,36 @@ void BarDownloadCleanup(BarApp_t *app)
 	pthread_cancel(d->io_ctx.thread);
 	if (d->cleanup)
 		unlink(d->downloadingFilename);
+}
+
+void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
+	BarDownload_t *d = &player->download;
+	if (!is_downloading(d))
+		return;
+
+	/* Stop the io_thread */
+	io_queue_join(&d->io_ctx);
+
+	fclose(d->handle);
+	pthread_cond_destroy(&d->io_ctx.cond);
+	pthread_mutex_destroy(&d->io_ctx.mutex);
+	d->handle = NULL;
+
+	if (d->io_ctx.high > high_watermark)
+		high_watermark = d->io_ctx.high;
+
+	if (wRet == WAITRESS_RET_OK && d->handle && !player->songIsAd) {
+		// Only "commit" download if everything downloaded okay
+		if (d->loveSong)
+			rename(d->downloadingFilename, d->lovedFilename);
+		else
+			rename(d->downloadingFilename, d->unlovedFilename);
+	} else if (d->cleanup)
+		unlink(d->downloadingFilename);
+
+	BarUiMsg(player->settings, MSG_INFO, "this song: writes:%zu, high watermark:%zu; overall watermark %zu; is ad: %d\n",
+			d->io_ctx.processed, d->io_ctx.high, high_watermark,
+			player->songIsAd);
 }
 
 void BarDownloadInit(BarApp_t *app)
