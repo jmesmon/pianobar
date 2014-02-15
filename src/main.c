@@ -339,8 +339,8 @@ static void BarMainPrintTime (BarApp_t *app) {
 	BarUiMsg (&app->settings, MSG_TIME, "%c%02i:%02i/%02i:%02i\r",
 			(sign == POSITIVE ? '+' : '-'),
 			songRemaining / 60, songRemaining % 60,
-			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR / 60,
-			app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR % 60);
+			(int)(app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR / 60),
+			(int)(app->player.songDuration / BAR_PLAYER_MS_TO_S_FACTOR % 60));
 }
 
 /*	main loop
