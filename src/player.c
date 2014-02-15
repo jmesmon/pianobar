@@ -140,7 +140,7 @@ static void BarPlayerSetSongDuration (struct audioPlayer *player, unsigned long 
 	player->songDuration = duration;
 	player->songIsAd = duration == 30;
 	BarPlayerUpdateScale(player);
-	BarUiMsg (player->settings, MSG_ERR, "DURATION: %d AD: %d", duration, player->songIsAd);
+	BarUiMsg (player->settings, MSG_ERR, "DURATION: %d AD: %d\n", duration, player->songIsAd);
 }
 
 #ifdef ENABLE_FAAD
