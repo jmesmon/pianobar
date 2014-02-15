@@ -138,9 +138,11 @@ void BarPlayerUpdateScale (struct audioPlayer *player) {
 
 static void BarPlayerSetSongDuration (struct audioPlayer *player, unsigned long duration) {
 	player->songDuration = duration;
-	player->songIsAd = duration == 30;
+	// 15232  / 1000 = 15.232 = "15 seconds"???
+	unsigned long secs = duration / BAR_PLAYER_MS_TO_S_FACTOR;
+	player->songIsAd = (secs == 15 || secs == 30) ;
 	BarPlayerUpdateScale(player);
-	BarUiMsg (player->settings, MSG_ERR, "DURATION: %d AD: %d\n", duration, player->songIsAd);
+	BarUiMsg (player->settings, MSG_ERR, "DURATION: %lu (%lu) AD: %d\n", duration, secs, player->songIsAd);
 }
 
 #ifdef ENABLE_FAAD
