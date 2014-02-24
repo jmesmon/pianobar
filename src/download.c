@@ -307,22 +307,23 @@ void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 	/* Stop the io_thread */
 	io_queue_join(&d->io_ctx);
 
-	fclose(d->handle);
-	pthread_cond_destroy(&d->io_ctx.cond);
-	pthread_mutex_destroy(&d->io_ctx.mutex);
-	d->handle = NULL;
-
 	if (d->io_ctx.high > high_watermark)
 		high_watermark = d->io_ctx.high;
 
 	if (wRet == WAITRESS_RET_OK && d->handle && !player->songIsAd) {
 		// Only "commit" download if everything downloaded okay
+		int ret;
 		if (d->loveSong)
-			rename(d->downloadingFilename, d->lovedFilename);
+			ret = rename(d->downloadingFilename, d->lovedFilename);
 		else
-			rename(d->downloadingFilename, d->unlovedFilename);
+			ret = rename(d->downloadingFilename, d->unlovedFilename);
 	} else if (d->cleanup)
 		unlink(d->downloadingFilename);
+
+	fclose(d->handle);
+	pthread_cond_destroy(&d->io_ctx.cond);
+	pthread_mutex_destroy(&d->io_ctx.mutex);
+	d->handle = NULL;
 
 	BarUiMsg(player->settings, MSG_INFO, "this song: writes:%zu, high watermark:%zu; overall watermark %zu; is ad: %d\n",
 			d->io_ctx.processed, d->io_ctx.high, high_watermark,
