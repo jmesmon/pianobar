@@ -40,7 +40,6 @@ typedef struct {
     char downloadingFilename[1024 * 2];
     char lovedFilename[1024 * 2];
     char unlovedFilename[1024 * 2];
-    unsigned int loveSong;
     bool cleanup;
 
     struct io_queue io_ctx;

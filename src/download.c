@@ -11,6 +11,14 @@
 #include "ui.h" /* BarUiMsg */
 #include "circ_buf.h"
 
+
+#define container_off(containing_type, member)	\
+	offsetof(containing_type, member)
+#define container_of(member_ptr, containing_type, member)		\
+	 ((containing_type *)						\
+	  (void *)((char *)(member_ptr)						\
+	   - container_off(containing_type, member)))
+
 bool _nchar( char c ){
 	if ( 48 <= c && c <= 57 ) { /* 0 .. 9 */
 		return true;
@@ -262,10 +270,6 @@ void *io_thread(void *v) {
 void BarDownloadStart(BarApp_t *app) {
 	BarDownload_t *d = &app->player.download;
 
-	/* Indicate that the song is loved so we save it to the right place */
-	/* XXX: this can change at _any_ point while we're playing */
-	d->loveSong = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
-
 	/* Pass through the cleanup setting */
 	d->cleanup = app->settings.downloadCleanup;
 
@@ -299,8 +303,15 @@ void BarDownloadCleanup(BarApp_t *app)
 		unlink(d->downloadingFilename);
 }
 
+static BarApp_t *player_to_app(struct audioPlayer *player)
+{
+	return container_of(player, BarApp_t, player);
+}
+
 void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 	BarDownload_t *d = &player->download;
+	BarApp_t *app = player_to_app(player);
+
 	if (!is_downloading(d))
 		return;
 
@@ -310,10 +321,11 @@ void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
 	if (d->io_ctx.high > high_watermark)
 		high_watermark = d->io_ctx.high;
 
-	if (wRet == WAITRESS_RET_OK && d->handle && !player->songIsAd) {
+	if (wRet == WAITRESS_RET_OK && !player->songIsAd) {
 		// Only "commit" download if everything downloaded okay
 		int ret;
-		if (d->loveSong)
+		int love = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
+		if (love)
 			ret = rename(d->downloadingFilename, d->lovedFilename);
 		else
 			ret = rename(d->downloadingFilename, d->unlovedFilename);
