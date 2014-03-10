@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include <stdbool.h>
 #include <gnutls/gnutls.h>
 
-#define WAITRESS_BUFFER_SIZE 10*1024
+#define WAITRESS_BUFFER_SIZE 100*1024
 
 typedef enum {
 	WAITRESS_METHOD_GET = 0,
