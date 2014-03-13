@@ -104,8 +104,6 @@ struct audioPlayer {
 
 	unsigned char *buffer;
 
-	BarDownload_t download;
-
 	const BarSettings_t *settings;
 	bool paused;
 	pthread_mutex_t pauseMutex;

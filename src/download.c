@@ -1,16 +1,21 @@
 #ifndef __FreeBSD__
-#define _POSIX_C_SOURCE 1 /* fileno() */
+#define _POSIX_C_SOURCE 201401L /* fileno() */
+#define _ATFILE_SOURCE
 #define _BSD_SOURCE /* strdup() */
 #define _DARWIN_C_SOURCE /* strdup() on OS X */
 #endif
 
 #include <string.h> /* strdup() */
+#include <assert.h>
+#include <fcntl.h>
 #include <sys/stat.h> /* mkdir() */
+
 
 #include "download.h"
 #include "ui.h" /* BarUiMsg */
 #include "circ_buf.h"
 
+#define CURR_FD -2
 
 #define container_off(containing_type, member)	\
 	offsetof(containing_type, member)
@@ -18,6 +23,290 @@
 	 ((containing_type *)						\
 	  (void *)((char *)(member_ptr)						\
 	   - container_off(containing_type, member)))
+
+static void *memdup(const void *data, size_t len)
+{
+	void *x = malloc(len);
+	if (!x)
+		return NULL;
+
+	memcpy(x, data, len);
+	return x;
+}
+
+static int _ioq_check_for_space(struct io_queue *ioq)
+{
+	size_t curr = CIRC_CNT(ioq->head, ioq->tail, IOP_CT);
+	if (curr > ioq->high)
+		ioq->high = curr;
+	if (CIRC_FULL(ioq->head, ioq->tail, IOP_CT)) {
+		fprintf(stderr, "CIRC_FULL head: %zu tail: %zu\n", ioq->head, ioq->tail);
+		ioq->overflow = true;
+		return -1;
+	}
+
+	return 0;
+}
+
+#if 0
+#define ioq_debug(fmt, ...) \
+		fprintf(stderr, "ioq: " fmt, ## __VA_ARGS__)
+#else
+/* FIXME: eval arguments */
+#define ioq_debug(fmt, ...) do { } while (0)
+#endif
+
+static void _ioq_wait_for_space(struct io_queue *ioq)
+{
+	size_t curr = CIRC_CNT(ioq->head, ioq->tail, IOP_CT);
+	if (curr > ioq->high)
+		ioq->high = curr;
+	while (CIRC_FULL(ioq->head, ioq->tail, IOP_CT)) {
+		fprintf(stderr, "CIRC_FULL head: %zu tail: %zu\n", ioq->head, ioq->tail);
+		ioq->overflow = true;
+		pthread_cond_wait(&ioq->cond, &ioq->mutex);
+	}
+}
+
+static struct io_op *ioq_add__lock(struct io_queue *ioq)
+{
+	pthread_mutex_lock(&ioq->mutex);
+	int r = _ioq_check_for_space(ioq);
+	if (r)
+		return NULL;
+	return &ioq->iops[ioq->head];
+}
+
+static void _ioq_op_added(struct io_queue *ioq)
+{
+	//if (CIRC_EMPTY(ioq->head, ioq->tail, IOP_CT))
+		pthread_cond_signal(&ioq->cond);
+	ioq->head = CIRC_NEXT(ioq->head, IOP_CT);
+}
+
+static void ioq_add__unlock(struct io_queue *ioq)
+{
+	ioq_debug("added %d\n", ioq->iops[ioq->head].type);
+	_ioq_op_added(ioq);
+	pthread_mutex_unlock(&ioq->mutex);
+}
+
+static void io_write(struct io_queue *ioq, int filedes, const void *data, size_t size)
+{
+	struct io_op *iop = ioq_add__lock(ioq);
+
+	*iop = (struct io_op) {
+		.type = IO_TYPE_WRITE,
+		.data.write = {
+			.fd = filedes,
+			.data = memdup(data, size),
+			.len  = size,
+		}
+	};
+
+	ioq_add__unlock(ioq);
+}
+
+static void io_mkdir(struct io_queue *ioq, int fd, const char *path, mode_t mode)
+{
+	struct io_op *iop = ioq_add__lock(ioq);
+
+	*iop = (struct io_op) {
+		.type = IO_TYPE_MKDIR,
+		.data.mkdir = {
+			.fd = fd,
+			.path = strdup(path),
+			.mode = mode
+		}
+	};
+
+	ioq_add__unlock(ioq);
+}
+
+static void ioq_join(struct io_queue *ioq)
+{
+	struct io_op *iop = ioq_add__lock(ioq);
+	iop->type = IO_TYPE_EXIT;
+	ioq_add__unlock(ioq);
+	pthread_join(ioq->thread, NULL);
+}
+
+static void io_rename(struct io_queue *ioq, int oldfd, const char *old, int newfd, const char *new)
+{
+	struct io_op *op = ioq_add__lock(ioq);
+	*op = (struct io_op) {
+		.type = IO_TYPE_RENAME,
+		.data.rename = {
+			.oldfd = oldfd,
+			.old = strdup(old),
+			.newfd = newfd,
+			.new = strdup(new)
+		}
+	};
+	ioq_add__unlock(ioq);
+}
+
+static void io_close(struct io_queue *ioq, int fd)
+{
+	struct io_op *op = ioq_add__lock(ioq);
+	*op = (struct io_op) {
+		.type = IO_TYPE_CLOSE,
+		.data.close = {
+			.fd = fd
+		}
+	};
+	ioq_add__unlock(ioq);
+}
+
+static void io_unlink(struct io_queue *ioq, int dirfd, const char *pathname, int flags)
+{
+	struct io_op *op = ioq_add__lock(ioq);
+	*op = (struct io_op) {
+		.type = IO_TYPE_UNLINK,
+		.data.unlink = {
+			.dirfd = dirfd,
+			.pathname = strdup(pathname),
+			.flags = flags
+		}
+	};
+	ioq_add__unlock(ioq);
+}
+
+#define iop_log(fmt, ...) \
+		fprintf(stderr, fmt, ## __VA_ARGS__)
+
+static void *io_thread(void *v) {
+	struct io_queue *io = v;
+	int ret;
+
+	for (;;) {
+		pthread_mutex_lock(&io->mutex);
+		while (CIRC_EMPTY(io->head, io->tail, IOP_CT))
+			pthread_cond_wait(&io->cond, &io->mutex);
+
+		/* copy the iop */
+		struct io_op iop = io->iops[io->tail];
+
+		/* advance the circular buffer */
+		if (CIRC_FULL(io->head, io->tail, IOP_CT))
+			pthread_cond_signal(&io->cond);
+
+		io->tail = CIRC_NEXT(io->tail, IOP_CT);
+		pthread_mutex_unlock(&io->mutex);
+
+		/* process the iop */
+		switch(iop.type) {
+			case IO_TYPE_OPEN:
+				if (io->single_file) {
+					printf("WARN: open while file still open\n");
+					fclose(io->single_file);
+				}
+
+				assert(iop.data.open.dirfd == AT_FDCWD);
+				assert(iop.data.open.flags == 0);
+				assert(iop.data.open.mode  == O_WRONLY);
+
+				io->single_file = fopen(iop.data.open.pathname, "w");
+				iop_log(OPEN_FMT " = %p\n",
+						OPEN_EXP(iop),
+						(void *)io->single_file);
+				if (!io->single_file) {
+					printf("WARN: failed to open %s\n", iop.data.open.pathname);
+				}
+
+				free(iop.data.open.pathname);
+				break;
+
+			case IO_TYPE_WRITE:
+				assert(io->single_file);
+				assert(iop.data.write.fd == CURR_FD);
+
+				{
+					ssize_t r = fwrite(iop.data.write.data, iop.data.write.len, 1,
+								io->single_file);
+					iop_log("write(..., %zu, %p) = %zd\n",
+							iop.data.write.len,
+							(void *)io->single_file, r);
+				}
+				free(iop.data.write.data);
+				break;
+			case IO_TYPE_CLOSE:
+				assert(io->single_file);
+				assert(iop.data.close.fd == CURR_FD);
+				ret = fclose(io->single_file);
+				iop_log("close(%p) = %d\n", (void *)io->single_file, ret);
+				io->single_file = NULL;
+				break;
+			case IO_TYPE_MKDIR:
+				ret = mkdirat(MKDIR_EXP(iop));
+				iop_log(MKDIR_FMT" = %d\n",
+						MKDIR_EXP(iop), ret);
+				if (ret && errno != EEXIST)
+					printf("WARN: "MKDIR_FMT" =  %d %d %s\n", MKDIR_EXP(iop), ret, errno, strerror(errno));
+				free(iop.data.mkdir.path);
+				break;
+			case IO_TYPE_RENAME:
+				ret = renameat(RENAME_EXP(iop));
+				iop_log(RENAME_FMT" = %d\n",
+						RENAME_EXP(iop), ret);
+				if (ret)
+					printf("WARN: "RENAME_FMT" = %d\n",
+							RENAME_EXP(iop),
+						ret);
+				free(iop.data.rename.new);
+				free(iop.data.rename.old);
+				break;
+			case IO_TYPE_UNLINK:
+				ret = unlinkat(UNLINK_EXP(iop));
+				iop_log(UNLINK_FMT" = %d\n",
+						UNLINK_EXP(iop), ret);
+				if (ret)
+					printf("WARN: "UNLINK_FMT" = %d\n",
+						UNLINK_EXP(iop),
+						ret);
+
+				free(iop.data.unlink.pathname);
+				break;
+			case IO_TYPE_EXIT:
+				return NULL;
+			default:
+				/* racy, but we don't care */
+				printf("ERROR: invalid iotype %d\n", iop.type);
+				abort();
+		}
+	}
+}
+
+static void io_open(struct io_queue *ioq, int dirfd, const char *pathname, int flags,  mode_t mode)
+{
+	struct io_op *op = ioq_add__lock(ioq);
+
+	*op = (struct io_op) {
+		.type = IO_TYPE_OPEN,
+		.data.open = {
+			.dirfd = dirfd,
+			.pathname = strdup(pathname),
+			.flags = flags,
+			.mode = mode
+		}
+	};
+
+	ioq_add__unlock(ioq);
+}
+
+
+static void ioq_init(struct io_queue *ioq)
+{
+	pthread_mutex_init(&ioq->mutex, NULL);
+	pthread_cond_init(&ioq->cond, NULL);
+	pthread_create(&ioq->thread, NULL, io_thread, ioq);
+}
+
+static BarApp_t *player_to_app(struct audioPlayer *player)
+{
+	return container_of(player, BarApp_t, player);
+}
+
 
 bool _nchar( char c ){
 	if ( 48 <= c && c <= 57 ) { /* 0 .. 9 */
@@ -88,7 +377,8 @@ static void BarDownloadFilename(BarApp_t *app) {
 	const char *separator = 0;
 	PianoSong_t *song = app->playlist;
 	PianoStation_t *station = app->curStation;
-	BarDownload_t *download = &(app->player.download);
+	BarDownload_t *download = &app->download;
+	struct io_queue *ioq = &download->io_ctx;
 
 	memset(songFilename, 0, sizeof (songFilename));
 	memset(baseFilename, 0, sizeof (baseFilename));
@@ -139,7 +429,7 @@ static void BarDownloadFilename(BarApp_t *app) {
 	strcpy(baseFilename, app->settings.download);
 	// TODO Check if trailing slash exists
 	strcat(baseFilename, "/");
-	mkdir(baseFilename, S_IRWXU | S_IRWXG);
+	io_mkdir(ioq, AT_FDCWD, baseFilename, S_IRWXU | S_IRWXG);
 
 	{
 		char *station_ = 0;
@@ -153,7 +443,7 @@ static void BarDownloadFilename(BarApp_t *app) {
 		free( station_ );
 	}
 	strcat(baseFilename, "/");
-	mkdir(baseFilename, S_IRWXU | S_IRWXG);
+	io_mkdir(ioq, AT_FDCWD, baseFilename, S_IRWXU | S_IRWXG);
 
 	/* Loved filename */
 	strcpy( download->lovedFilename, baseFilename );
@@ -162,7 +452,7 @@ static void BarDownloadFilename(BarApp_t *app) {
 	/* Unloved filename */
 	strcpy( download->unlovedFilename, baseFilename );
 	strcat( download->unlovedFilename, "/unloved/" );
-	mkdir( download->unlovedFilename, S_IRWXU | S_IRWXG);
+	io_mkdir(ioq, AT_FDCWD, download->unlovedFilename, S_IRWXU | S_IRWXG);
 	strcat( download->unlovedFilename, songFilename );
 
 	/* Downloading filename */
@@ -171,182 +461,71 @@ static void BarDownloadFilename(BarApp_t *app) {
 	strcat( download->downloadingFilename, songFilename );
 }
 
-bool is_downloading(BarDownload_t *d)
-{
-	/* TODO: check on io_thread */
-	return d->handle != NULL;
-}
-
-void *memdup(const void *data, size_t len)
-{
-	void *x = malloc(len);
-	if (!x)
-		return NULL;
-
-	memcpy(x, data, len);
-	return x;
-}
-
 void BarDownloadWrite(struct audioPlayer *player, const void *data, size_t size)
 {
-	BarDownload_t *d = &player->download;
-	if (!is_downloading(d))
-		return;
-
-	struct io_queue *ioq = &d->io_ctx;
-	pthread_mutex_lock(&ioq->mutex);
-	size_t curr = CIRC_CNT(ioq->head, ioq->tail, IOP_CT);
-	if (curr > ioq->high)
-		ioq->high = curr;
-	while (CIRC_FULL(ioq->head, ioq->tail, IOP_CT)) {
-		fprintf(stderr, "CIRC_FULL head: %zu tail: %zu\n", ioq->head, ioq->tail);
-		pthread_cond_wait(&ioq->cond, &ioq->mutex);
-	}
-
-	struct io_op *iop = &ioq->iops[ioq->head];
-	iop->type = IO_TYPE_WRITE;
-	iop->data.write.data = memdup(data, size);
-	iop->data.write.len  = size;
-
-	if (CIRC_EMPTY(ioq->head, ioq->tail, IOP_CT))
-		pthread_cond_signal(&ioq->cond);
-	ioq->head = CIRC_NEXT(ioq->head, IOP_CT);
-	pthread_mutex_unlock(&ioq->mutex);
-}
-
-static void io_queue_join(struct io_queue *ioq)
-{
-	pthread_mutex_lock(&ioq->mutex);
-	while (CIRC_FULL(ioq->head, ioq->tail, IOP_CT))
-		pthread_cond_wait(&ioq->cond, &ioq->mutex);
-	struct io_op *iop = &ioq->iops[ioq->head];
-	iop->type = IO_TYPE_EXIT;
-	if (CIRC_EMPTY(ioq->head, ioq->tail, IOP_CT))
-		pthread_cond_signal(&ioq->cond);
-	ioq->head = CIRC_NEXT(ioq->head, IOP_CT);
-	pthread_mutex_unlock(&ioq->mutex);
-	pthread_join(ioq->thread, NULL);
+	struct io_queue *ioq = &player_to_app(player)->download.io_ctx;
+	io_write(ioq, CURR_FD, data, size);
 }
 
 static size_t high_watermark;
-void *io_thread(void *v) {
-	BarApp_t *app = v;
-	BarDownload_t *d = &app->player.download;
-	struct io_queue *io = &d->io_ctx;
-
-	for (;;) {
-		pthread_mutex_lock(&io->mutex);
-		while (CIRC_EMPTY(io->head, io->tail, IOP_CT))
-			pthread_cond_wait(&io->cond, &io->mutex);
-
-		/* copy the iop */
-		struct io_op iop = io->iops[io->tail];
-
-		/* advance the circular buffer */
-		if (CIRC_FULL(io->head, io->tail, IOP_CT))
-			pthread_cond_signal(&io->cond);
-
-		io->tail = CIRC_NEXT(io->tail, IOP_CT);
-		pthread_mutex_unlock(&io->mutex);
-
-		/* process the iop */
-		switch(iop.type) {
-			case IO_TYPE_EXIT:
-				return NULL;
-			case IO_TYPE_WRITE:
-				io->processed++;
-				if (d->handle)
-					fwrite(iop.data.write.data, iop.data.write.len, 1, d->handle);
-				free(iop.data.write.data);
-				break;
-			default:
-				/* racy, but we don't care */
-				BarUiMsg(&app->settings, MSG_ERR, "io_thread failure");
-				abort();
-		}
-	}
-}
-
-void BarDownloadStart(BarApp_t *app) {
-	BarDownload_t *d = &app->player.download;
-
-	/* Pass through the cleanup setting */
-	d->cleanup = app->settings.downloadCleanup;
+void BarDownloadStart(BarApp_t *app)
+{
+	BarDownload_t *d = &app->download;
 
 	if (!app->settings.download)
 		/* No download directory set, so return */
 		return;
 
 	BarDownloadFilename(app);
-
-	d->handle = fopen(d->downloadingFilename, "w");
-	if (!d->handle) {
-		BarUiMsg (&app->settings, MSG_ERR, "Could not open file \"%s\" (%zu chars) to save to",
-				d->downloadingFilename, strlen(d->downloadingFilename));
-		/* TODO: we probably have a file name that is too long, shorten it */
-		return;
-	}
-
-	pthread_mutex_init(&d->io_ctx.mutex, NULL);
-	pthread_cond_init(&d->io_ctx.cond, NULL);
-	pthread_create(&d->io_ctx.thread, NULL, io_thread, app);
+	io_open(&d->io_ctx, AT_FDCWD, d->downloadingFilename, O_WRONLY, 0);
 }
 
 void BarDownloadCleanup(BarApp_t *app)
 {
+	/* Called when we're uncontrollably dying. */
 	if (!app)
 		return;
 
-	BarDownload_t *d = &app->player.download;
+	BarDownload_t *d = &app->download;
 	pthread_cancel(d->io_ctx.thread);
-	if (d->cleanup)
+	if (app->settings.downloadCleanup)
 		unlink(d->downloadingFilename);
 }
 
-static BarApp_t *player_to_app(struct audioPlayer *player)
+static void ioq_dinit(struct io_queue *ioq)
 {
-	return container_of(player, BarApp_t, player);
+	pthread_cond_destroy(&ioq->cond);
+	pthread_mutex_destroy(&ioq->mutex);
 }
 
 void BarDownloadFinish(struct audioPlayer *player, WaitressReturn_t wRet) {
-	BarDownload_t *d = &player->download;
 	BarApp_t *app = player_to_app(player);
-
-	if (!is_downloading(d))
-		return;
-
-	/* Stop the io_thread */
-	io_queue_join(&d->io_ctx);
-
-	if (d->io_ctx.high > high_watermark)
-		high_watermark = d->io_ctx.high;
+	BarDownload_t *d = &app->download;
+	struct io_queue *ioq = &d->io_ctx;
 
 	if (wRet == WAITRESS_RET_OK && !player->songIsAd) {
 		// Only "commit" download if everything downloaded okay
-		int ret;
-		int love = app->playlist->rating == PIANO_RATE_LOVE ? 1 : 0;
-		if (love)
-			ret = rename(d->downloadingFilename, d->lovedFilename);
+		if (app->playlist->rating == PIANO_RATE_LOVE)
+			io_rename(ioq, AT_FDCWD, d->downloadingFilename, AT_FDCWD, d->lovedFilename);
 		else
-			ret = rename(d->downloadingFilename, d->unlovedFilename);
-	} else if (d->cleanup)
-		unlink(d->downloadingFilename);
+			io_rename(ioq, AT_FDCWD, d->downloadingFilename, AT_FDCWD, d->unlovedFilename);
+	} else if (player->settings->downloadCleanup)
+		io_unlink(ioq, AT_FDCWD, d->downloadingFilename, 0);
 
-	fclose(d->handle);
-	pthread_cond_destroy(&d->io_ctx.cond);
-	pthread_mutex_destroy(&d->io_ctx.mutex);
-	d->handle = NULL;
-
-	BarUiMsg(player->settings, MSG_INFO, "this song: writes:%zu, high watermark:%zu; overall watermark %zu; is ad: %d\n",
-			d->io_ctx.processed, d->io_ctx.high, high_watermark,
-			player->songIsAd);
+	io_close(ioq, CURR_FD);
 }
 
 void BarDownloadInit(BarApp_t *app)
 {
-	/* TODO: set up io context to avoid blocking between songs */
+	/* Called when we start up, setup the io thread */
+	struct io_queue *ioq = &app->download.io_ctx;
+	ioq_init(ioq);
 }
 
 void BarDownloadDini(BarApp_t *app)
 {
+	/* Called when pianobar is exiting, shutdown the io thread */
+	struct io_queue *ioq = &app->download.io_ctx;
+	ioq_join(ioq);
+	ioq_dinit(ioq);
 }
