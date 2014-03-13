@@ -48,12 +48,20 @@ static int _ioq_check_for_space(struct io_queue *ioq)
 	return 0;
 }
 
-#if 0
+#ifdef DEBUG
 #define ioq_debug(fmt, ...) \
 		fprintf(stderr, "ioq: " fmt, ## __VA_ARGS__)
 #else
 /* FIXME: eval arguments */
 #define ioq_debug(fmt, ...) do { } while (0)
+#endif
+
+#ifdef DEBUG
+#define iop_log(fmt, ...) \
+		fprintf(stderr, fmt, ## __VA_ARGS__)
+#else
+/* FIXME: eval arguments */
+#define iop_log(fmt, ...) do { } while (0)
 #endif
 
 static void _ioq_wait_for_space(struct io_queue *ioq)
@@ -171,9 +179,6 @@ static void io_unlink(struct io_queue *ioq, int dirfd, const char *pathname, int
 	};
 	ioq_add__unlock(ioq);
 }
-
-#define iop_log(fmt, ...) \
-		fprintf(stderr, fmt, ## __VA_ARGS__)
 
 static void *io_thread(void *v) {
 	struct io_queue *io = v;
