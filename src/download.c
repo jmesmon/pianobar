@@ -208,8 +208,8 @@ static void *io_thread(void *v) {
 				}
 
 				assert(iop.data.open.dirfd == AT_FDCWD);
-				assert(iop.data.open.flags == 0);
-				assert(iop.data.open.mode  == O_WRONLY);
+				assert(iop.data.open.flags == O_WRONLY);
+				assert(iop.data.open.mode  == 0666);
 
 				io->single_file = fopen(iop.data.open.pathname, "w");
 				iop_log(OPEN_FMT " = %p\n",
@@ -282,7 +282,7 @@ static void *io_thread(void *v) {
 	}
 }
 
-static void io_open(struct io_queue *ioq, int dirfd, const char *pathname, int flags,  mode_t mode)
+static void io_open(struct io_queue *ioq, int dirfd, const char *pathname, int flags, mode_t mode)
 {
 	struct io_op *op = ioq_add__lock(ioq);
 
@@ -482,7 +482,7 @@ void BarDownloadStart(BarApp_t *app)
 		return;
 
 	BarDownloadFilename(app);
-	io_open(&d->io_ctx, AT_FDCWD, d->downloadingFilename, O_WRONLY, 0);
+	io_open(&d->io_ctx, AT_FDCWD, d->downloadingFilename, O_WRONLY, 0666);
 }
 
 void BarDownloadCleanup(BarApp_t *app)
