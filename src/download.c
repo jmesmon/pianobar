@@ -48,20 +48,24 @@ static int _ioq_check_for_space(struct io_queue *ioq)
 	return 0;
 }
 
+__attribute__((format(printf,1,2)))
+static inline void printf_check(const char *fmt, ...)
+{
+}
+
 #ifdef DEBUG
 #define ioq_debug(fmt, ...) \
 		fprintf(stderr, "ioq: " fmt, ## __VA_ARGS__)
 #else
 /* FIXME: eval arguments */
-#define ioq_debug(fmt, ...) do { } while (0)
+#define ioq_debug(...) printf_check(__VA_ARGS__)
 #endif
 
 #ifdef DEBUG
 #define iop_log(fmt, ...) \
 		fprintf(stderr, fmt, ## __VA_ARGS__)
 #else
-/* FIXME: eval arguments */
-#define iop_log(fmt, ...) do { } while (0)
+#define iop_log(...) printf_check(__VA_ARGS__)
 #endif
 
 static void _ioq_wait_for_space(struct io_queue *ioq)
