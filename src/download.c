@@ -223,8 +223,13 @@ static void *io_thread(void *v) {
 				break;
 
 			case IO_TYPE_WRITE:
-				assert(io->single_file);
 				assert(iop.data.write.fd == CURR_FD);
+
+				if (!io->single_file) {
+					/* looks like opening failed, path name was probably too long */
+					iop_log("write() -> NOP\n");
+					goto nop_write;
+				}
 
 				{
 					ssize_t r = fwrite(iop.data.write.data, iop.data.write.len, 1,
@@ -233,6 +238,7 @@ static void *io_thread(void *v) {
 							iop.data.write.len,
 							(void *)io->single_file, r);
 				}
+nop_write:
 				free(iop.data.write.data);
 				break;
 			case IO_TYPE_CLOSE:
