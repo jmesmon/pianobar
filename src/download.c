@@ -246,8 +246,12 @@ nop_write:
 				free(iop.data.write.data);
 				break;
 			case IO_TYPE_CLOSE:
-				assert(io->single_file);
 				assert(iop.data.close.fd == CURR_FD);
+				if (!io->single_file) {
+					iop_log("close() -> NOP\n");
+					break;
+				}
+
 				ret = fclose(io->single_file);
 				iop_log("close(%p) = %d\n", (void *)io->single_file, ret);
 				io->single_file = NULL;
