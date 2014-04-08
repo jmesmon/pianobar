@@ -354,7 +354,7 @@ PianoStation_t *BarUiSelectStation (BarApp_t *app, PianoStation_t *stations,
 			const PianoStation_t *currStation = sortedStations[i];
 			/* filter stations */
 			if (BarStrCaseStr (currStation->name, buf) != NULL) {
-				BarUiMsg (&app->settings, MSG_LIST, "%2i) %c%c%c %s\n", i,
+				BarUiMsg (&app->settings, MSG_LIST, "%2zi) %c%c%c %s\n", i,
 						currStation->useQuickMix ? 'q' : ' ',
 						currStation->isQuickMix ? 'Q' : ' ',
 						!currStation->isCreator ? 'S' : ' ',
@@ -364,10 +364,10 @@ PianoStation_t *BarUiSelectStation (BarApp_t *app, PianoStation_t *stations,
 			}
 		}
 
-		BarUiMsg (&app->settings, MSG_QUESTION, prompt);
+		BarUiMsg (&app->settings, MSG_QUESTION, "%s", prompt);
 		if (autoselect && displayCount == 1 && stationCount != 1) {
 			/* auto-select last remaining station */
-			BarUiMsg (&app->settings, MSG_NONE, "%i\n", lastDisplayed);
+			BarUiMsg (&app->settings, MSG_NONE, "%zi\n", lastDisplayed);
 			retStation = sortedStations[lastDisplayed];
 		} else {
 			if (BarReadlineStr (buf, sizeof (buf), &app->input,
@@ -441,7 +441,7 @@ PianoArtist_t *BarUiSelectArtist (BarApp_t *app, PianoArtist_t *startArtist) {
 		tmpArtist = startArtist;
 		PianoListForeachP (tmpArtist) {
 			if (BarStrCaseStr (tmpArtist->name, buf) != NULL) {
-				BarUiMsg (&app->settings, MSG_LIST, "%2u) %s\n", i,
+				BarUiMsg (&app->settings, MSG_LIST, "%2lu) %s\n", i,
 						tmpArtist->name);
 			}
 			i++;
@@ -477,7 +477,7 @@ char *BarUiSelectMusicId (BarApp_t *app, PianoStation_t *station,
 	PianoArtist_t *tmpArtist;
 	PianoSong_t *tmpSong;
 
-	BarUiMsg (&app->settings, MSG_QUESTION, msg);
+	BarUiMsg (&app->settings, MSG_QUESTION, "%s", msg);
 	if (BarReadlineStr (lineBuf, sizeof (lineBuf), &app->input,
 			BAR_RL_DEFAULT) > 0) {
 		PianoReturn_t pRet;
@@ -611,7 +611,7 @@ static void BarUiAppendNewline (char *s, size_t maxlen) {
  *	@param pianobar settings
  *	@param the station
  */
-inline void BarUiPrintStation (const BarSettings_t *settings,
+void BarUiPrintStation (const BarSettings_t *settings,
 		PianoStation_t *station) {
 	char outstr[512];
 	const char *vals[] = {station->name, station->id};
@@ -627,7 +627,7 @@ inline void BarUiPrintStation (const BarSettings_t *settings,
  *	@param the song
  *	@param alternative station info (show real station for quickmix, e.g.)
  */
-inline void BarUiPrintSong (const BarSettings_t *settings,
+void BarUiPrintSong (const BarSettings_t *settings,
 		const PianoSong_t *song, const PianoStation_t *station) {
 	char outstr[512];
 	const char *vals[] = {song->title, song->artist, song->album,
@@ -735,8 +735,8 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 				"pRetStr=%s\n"
 				"wRet=%i\n"
 				"wRetStr=%s\n"
-				"songDuration=%lu\n"
-				"songPlayed=%lu\n"
+				"songDuration=%u\n"
+				"songPlayed=%u\n"
 				"rating=%i\n"
 				"detailUrl=%s\n",
 				curSong == NULL ? "" : curSong->artist,
