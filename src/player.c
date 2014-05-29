@@ -72,6 +72,7 @@ void BarPlayerInit () {
 
 void BarPlayerDestroy () {
 	avformat_network_deinit ();
+	/* DEPRICATED ffmpeg2.2 */
 	avfilter_uninit ();
 	ao_shutdown ();
 }
@@ -161,8 +162,10 @@ void *BarPlayerThread (void *data) {
 		softfail ("codec_open2");
 	}
 
+	/* DEPRICATED ffmpeg2.2 */
 	frame = avcodec_alloc_frame ();
 	assert (frame != NULL);
+	/* DEPRICATED ffmpeg2.2 */
 	filteredFrame = avcodec_alloc_frame ();
 	assert (filteredFrame != NULL);
 
@@ -297,6 +300,7 @@ void *BarPlayerThread (void *data) {
 					/* ffmpeg’s compatibility layer is broken in some releases */
 					if (av_buffersink_get_buffer_ref (fbufsink, &audioref, 0) < 0) {
 #else
+					/* DEPRICATED ffmpeg2.2 */
 					if (av_buffersink_read (fbufsink, &audioref) < 0) {
 #endif
 						/* try again next frame */
