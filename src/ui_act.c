@@ -328,6 +328,9 @@ BarUiActCallback(BarUiActStationFromGenre) {
 /*	print verbose song information
  */
 BarUiActCallback(BarUiActSongInfo) {
+    PianoReturn_t pRet = PIANO_RET_OK;
+    WaitressReturn_t wRet = WAITRESS_RET_OK;
+
 	assert (selStation != NULL);
 	assert (selSong != NULL);
 
@@ -337,6 +340,8 @@ BarUiActCallback(BarUiActSongInfo) {
 			selStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations, selSong->stationId) :
 			NULL);
+
+    BarUiActDefaultEventcmd ("songinfo");
 }
 
 /*	print some debugging information
@@ -395,6 +400,7 @@ BarUiActCallback(BarUiActLoveSong) {
 	PianoRequestDataRateSong_t reqData;
 	reqData.song = selSong;
 	reqData.rating = PIANO_RATE_LOVE;
+	app->playlist->rating = PIANO_RATE_LOVE;
 
 	BarUiMsg (&app->settings, MSG_INFO, "Loving song... ");
 	BarUiActDefaultPianoCall (PIANO_REQUEST_RATE_SONG, &reqData);
@@ -790,4 +796,3 @@ BarUiActCallback(BarUiActManageStation) {
 
 	PianoDestroyStationInfo (&reqData.info);
 }
-

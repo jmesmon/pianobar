@@ -983,8 +983,9 @@ static WaitressReturn_t WaitressReceiveHeaders (WaitressHandle_t *waith,
 				(nextLine = WaitressGetline (thisLine)) != NULL) {
 			switch (hdrParseMode) {
 				/* Status code */
-				case HDRM_HEAD:
-					switch (WaitressParseStatusline (thisLine)) {
+				case HDRM_HEAD: {
+					int status = WaitressParseStatusline(thisLine);
+					switch (status) {
 						case 200:
 						case 206:
 							hdrParseMode = HDRM_LINES;
@@ -1007,9 +1008,10 @@ static WaitressReturn_t WaitressReceiveHeaders (WaitressHandle_t *waith,
 							break;
 
 						default:
-							return WAITRESS_RET_STATUS_UNKNOWN;
+							return WAITRESS_RET_STATUS_UNKNOWN + status ;
 							break;
 					}
+				}
 					break;
 
 				/* Everything else, except status code */
@@ -1159,6 +1161,7 @@ WaitressReturn_t WaitressFetchCall (WaitressHandle_t *waith) {
 }
 
 const char *WaitressErrorToStr (WaitressReturn_t wRet) {
+	static char buf[512];
 	switch (wRet) {
 		case WAITRESS_RET_OK:
 			return "Everything's fine :)";
@@ -1166,10 +1169,6 @@ const char *WaitressErrorToStr (WaitressReturn_t wRet) {
 
 		case WAITRESS_RET_ERR:
 			return "Unknown.";
-			break;
-
-		case WAITRESS_RET_STATUS_UNKNOWN:
-			return "Unknown HTTP status code.";
 			break;
 
 		case WAITRESS_RET_NOTFOUND:
@@ -1232,8 +1231,17 @@ const char *WaitressErrorToStr (WaitressReturn_t wRet) {
 			return "TLS fingerprint mismatch.";
 			break;
 
+		case WAITRESS_RET_STATUS_UNKNOWN:
+			return "Unknown HTTP status code.";
+			break;
+
 		default:
-			return "No error message available.";
+			if (wRet >= WAITRESS_RET_STATUS_UNKNOWN) {
+				snprintf(buf, sizeof(buf), "Unknown HTTP status code: %d\n",
+						wRet - WAITRESS_RET_STATUS_UNKNOWN);
+				return buf;
+			} else
+				return "No error message available.";
 			break;
 	}
 }

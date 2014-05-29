@@ -30,8 +30,9 @@ THE SOFTWARE.
 #include "player.h"
 #include "settings.h"
 #include "ui_readline.h"
+#include "download.h"
 
-typedef struct {
+typedef struct BarApp_t {
 	PianoHandle_t ph;
 	WaitressHandle_t waith;
 	struct audioPlayer player;
@@ -43,6 +44,7 @@ typedef struct {
 	char doQuit;
 	BarReadlineFds_t input;
 	unsigned int playerErrors;
+	BarDownload_t download;
 } BarApp_t;
 
 #endif /* SRC_MAIN_H_4ZGSCG6X */

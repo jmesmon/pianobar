@@ -60,9 +60,10 @@ THE SOFTWARE.
 #include "ui.h"
 #include "ui_dispatch.h"
 #include "ui_readline.h"
+#include "download.h"
 
-/*	copy proxy settings to waitress handle
- */
+/* Normalizing strdrup for paths, etc. */
+
 static void BarMainLoadProxy (const BarSettings_t *settings,
 		WaitressHandle_t *waith) {
 	/* set up proxy (control proxy for non-us citizen or global proxy for poor
@@ -217,8 +218,9 @@ static void BarMainHandleUserInput (BarApp_t *app) {
 			BAR_RL_FULLRETURN | BAR_RL_NOECHO, 1) > 0) {
 		BarUiDispatch (app, buf[0], app->curStation, app->playlist, true,
 				BAR_DC_GLOBAL);
-	}
+    }
 }
+
 
 /*	fetch new playlist
  */
@@ -409,11 +411,21 @@ static void BarMainLoop (BarApp_t *app) {
 	}
 }
 
+static BarApp_t *glapp = 0;
+
+static void BarCleanup (int sig) {
+    BarDownloadCleanup(glapp);
+    signal( sig, SIG_DFL );
+    raise( sig );
+}
+
 int main (int argc, char **argv) {
-	static BarApp_t app;
+    static BarApp_t app;
+	char ctlPath[PATH_MAX];
 	/* terminal attributes _before_ we started messing around with ~ECHO */
 	struct termios termOrig;
 
+    glapp = &app;
 	memset (&app, 0, sizeof (app));
 
 	/* save terminal attributes, before disabling echoing */
@@ -485,6 +497,9 @@ int main (int argc, char **argv) {
 			app.input.fds[1];
 	++app.input.maxfd;
 
+	BarDownloadInit(&app);
+	signal(SIGINT,  BarCleanup );
+	signal(SIGTERM, BarCleanup );
 	BarMainLoop (&app);
 
 	if (app.input.fds[1] != -1) {
@@ -493,6 +508,7 @@ int main (int argc, char **argv) {
 
 	/* write statefile */
 	BarSettingsWrite (app.curStation, &app.settings);
+	BarDownloadDini(&app);
 
 	PianoDestroy (&app.ph);
 	PianoDestroyPlaylist (app.songHistory);

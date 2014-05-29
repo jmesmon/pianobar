@@ -50,6 +50,7 @@ THE SOFTWARE.
 #include "config.h"
 #include "ui.h"
 #include "ui_types.h"
+#include "download.h"
 
 static void printError (const BarSettings_t * const settings,
 		const char * const msg, int ret) {

@@ -37,6 +37,7 @@ THE SOFTWARE.
 #include <waitress.h>
 
 #include "settings.h"
+#include "download.h"
 
 struct audioPlayer {
 	/* protected by pauseMutex */

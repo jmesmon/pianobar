@@ -34,6 +34,8 @@ THE SOFTWARE.
 #include <stdio.h>
 #include <limits.h>
 #include <assert.h>
+#include <stdbool.h>
+#include <wordexp.h>
 
 #include <piano.h>
 
@@ -107,6 +109,8 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 		free (settings->msgFormat[i].prefix);
 		free (settings->msgFormat[i].postfix);
 	}
+    free (settings->download);
+    free (settings->downloadSeparator);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -126,8 +130,12 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->autoselect = true;
 	settings->history = 5;
 	settings->volume = 0;
+	settings->mute = false;
+	settings->noReplayGain = false;
 	settings->maxPlayerErrors = 5;
 	settings->sortOrder = BAR_SORT_NAME_AZ;
+	settings->loveIcon = strdup ("<3");
+	settings->banIcon = strdup ("</3");
 	settings->loveIcon = strdup (" <3");
 	settings->banIcon = strdup (" </3");
 	settings->atIcon = strdup (" @ ");
@@ -161,6 +169,11 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->msgFormat[MSG_QUESTION].postfix = NULL;
 	settings->msgFormat[MSG_LIST].prefix = strdup ("\t");
 	settings->msgFormat[MSG_LIST].postfix = NULL;
+
+    settings->download = 0;
+    settings->downloadSafeFilename = false;
+    settings->downloadSeparator = strdup("---");
+    settings->downloadCleanup = true;
 
 	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
 		settings->keys[i] = dispatchActions[i].defaultKey;
@@ -273,6 +286,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 				settings->atIcon = strdup (val);
 			} else if (streq ("volume", key)) {
 				settings->volume = atoi (val);
+			} else if (streq ("mute", key)) {
+				settings->mute = atoi (val);
 			} else if (streq ("no_reply_gain", key)) {
 				settings->noReplayGain = atoi (val);
 			} else if (streq ("format_nowplaying_song", key)) {
@@ -291,6 +306,17 @@ void BarSettingsRead (BarSettings_t *settings) {
 				settings->startPaused = atoi (val);
 			} else if (streq ("autoselect", key)) {
 				settings->autoselect = atoi (val);
+			} else if (streq ("download", key)) {
+				wordexp_t p;
+				if (!wordexp(val, &p, 0))
+				    settings->download = strdup (p.we_wordv[0]);
+				wordfree(&p);
+			} else if (streq ("download_safe_filename", key)) {
+				settings->downloadSafeFilename = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
+			} else if (streq ("download_separator", key)) {
+				settings->downloadSeparator = strdup (val);
+			} else if (streq ("download_cleanup", key)) {
+			    settings->downloadCleanup = ( !streq( val, "0" ) && !streq( val, "false" ) && strlen( val ) ) ? true : false;
 			} else if (streq ("tls_fingerprint", key)) {
 				/* expects 40 byte hex-encoded sha1 */
 				if (strlen (val) == 40) {

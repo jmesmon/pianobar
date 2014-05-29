@@ -62,5 +62,6 @@ BarUiActCallback(BarUiActVolUp);
 BarUiActCallback(BarUiActManageStation);
 BarUiActCallback(BarUiActVolReset);
 BarUiActCallback(BarUiActGainToggle);
+BarUiActCallback(BarUiActVolMute);
 
 #endif /* SRC_UI_ACT_H_1FEFTC06 */

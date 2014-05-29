@@ -33,6 +33,7 @@ endif
 
 PIANOBAR_DIR:=src
 PIANOBAR_SRC:=\
+		${PIANOBAR_DIR}/download.c \
 		${PIANOBAR_DIR}/main.c \
 		${PIANOBAR_DIR}/player.c \
 		${PIANOBAR_DIR}/settings.c \
@@ -49,6 +50,7 @@ PIANOBAR_HDR:=\
 		${PIANOBAR_DIR}/ui.h \
 		${PIANOBAR_DIR}/ui_readline.h \
 		${PIANOBAR_DIR}/main.h \
+		${PIANOBAR_DIR}/download.h \
 		${PIANOBAR_DIR}/config.h
 PIANOBAR_OBJ:=${PIANOBAR_SRC:.c=.o}
 

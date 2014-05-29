@@ -28,6 +28,7 @@ THE SOFTWARE.
 
 #include <piano.h>
 #include <waitress.h>
+#include <stdbool.h>
 
 /* update structure in ui_dispatch.h if you add shortcuts here */
 typedef enum {
@@ -57,12 +58,13 @@ typedef enum {
 	BAR_KS_MANAGESTATION = 23,
 	BAR_KS_PLAYPAUSE2 = 24,
 	BAR_KS_CREATESTATIONFROMSONG = 25,
-	BAR_KS_PLAY = 26,
-	BAR_KS_PAUSE = 27,
+        BAR_KS_PLAY = 26,
+        BAR_KS_PAUSE = 27,
 	BAR_KS_VOLRESET = 28,
 	BAR_KS_GAINTOGGLE = 29,
+	BAR_KS_VOLMUTE = 30,
 	/* insert new shortcuts _before_ this element and increase its value */
-	BAR_KS_COUNT = 30,
+	BAR_KS_COUNT = 31,
 } BarKeyShortcutId_t;
 
 #define BAR_KS_DISABLED '\x00'
@@ -89,6 +91,7 @@ typedef struct {
 	bool autoselect;
 	unsigned int history, maxPlayerErrors;
 	int volume;
+	bool mute;
 	bool noReplayGain;
 	BarStationSorting_t sortOrder;
 	PianoAudioQuality_t audioQuality;
@@ -109,6 +112,10 @@ typedef struct {
 	char tlsFingerprint[20];
 	char keys[BAR_KS_COUNT];
 	BarMsgFormatStr_t msgFormat[MSG_COUNT];
+	char *download;
+	bool downloadSafeFilename;
+	char *downloadSeparator;
+    bool downloadCleanup;
 } BarSettings_t;
 
 #include <piano.h>

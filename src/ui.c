@@ -173,7 +173,7 @@ int BarUiPianoCall (BarApp_t * const app, PianoRequestType_t type,
 		}
 
 		*wRet = BarPianoHttpRequest (&app->waith, &req);
-		if (*wRet != WAITRESS_RET_OK) {
+		if (*wRet != WAITRESS_RET_OK && (*wRet - WAITRESS_RET_STATUS_UNKNOWN !=  502)) {
 			BarUiMsg (&app->settings, MSG_NONE, "Network error: %s\n", WaitressErrorToStr (*wRet));
 			if (req.responseData != NULL) {
 				free (req.responseData);
@@ -182,11 +182,16 @@ int BarUiPianoCall (BarApp_t * const app, PianoRequestType_t type,
 			return 0;
 		}
 
-		*pRet = PianoResponse (&app->ph, &req);
-		if (*pRet != PIANO_RET_CONTINUE_REQUEST) {
+		if (*wRet - WAITRESS_RET_STATUS_UNKNOWN == 502)
+			BarUiMsg(&app->settings, MSG_NONE, "Got HTTP 502, attempting reauth");
+
+		if (*wRet == WAITRESS_RET_OK)
+			*pRet = PianoResponse (&app->ph, &req);
+		if (*wRet != WAITRESS_RET_OK || *pRet != PIANO_RET_CONTINUE_REQUEST) {
 			/* checking for request type avoids infinite loops */
 			if (*pRet == PIANO_RET_P_INVALID_AUTH_TOKEN &&
-					type != PIANO_REQUEST_LOGIN) {
+					type != PIANO_REQUEST_LOGIN ||
+					*wRet - WAITRESS_RET_STATUS_UNKNOWN == 502) {
 				/* reauthenticate */
 				PianoReturn_t authpRet;
 				WaitressReturn_t authwRet;
