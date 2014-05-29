@@ -670,12 +670,15 @@ BarUiActCallback(BarUiActVolReset) {
 	BarPlayerSetVolume (&app->player);
 }
 
+BarUiActCallback(BarUiActVolMute) {
+	app->settings.mute = !app->settings.mute;
+	BarPlayerSetVolume (&app->player);
+	BarUiMsg (&app->settings, MSG_INFO, app->settings.mute ? "mutted\n" : "unmutted\n");
+}
+
 BarUiActCallback(BarUiActGainToggle) {
 	app->player.noGain = !app->player.noGain;
-	if (app->player.noGain)
-		BarUiMsg (&app->settings, MSG_INFO, "gain OFF\n");
-	else
-		BarUiMsg (&app->settings, MSG_INFO, "gain ON\n");
+	BarUiMsg (&app->settings, MSG_INFO, "gain %s\n", app->player.noGain ? "OFF" : "ON");
 }
 
 /*	manage station (remove seeds or feedback)

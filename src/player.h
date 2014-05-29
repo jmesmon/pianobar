@@ -59,6 +59,7 @@ struct audioPlayer {
 	volatile double volume;
 	double gain;
 	bool noGain;
+	bool songIsAd;
 	char *url;
 	const BarSettings_t *settings;
 
